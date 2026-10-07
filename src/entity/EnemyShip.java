@@ -29,7 +29,8 @@ public class EnemyShip extends Entity {
 	private boolean isDestroyed;
 	/** Values of the ship, in points, when destroyed. */
 	private int pointValue;
-
+    /** Cooldown between this ship's shots. Null if the ship cannot shoot. */
+    private Cooldown shootingCooldown;
 	/**
 	 * Constructor, establishes the ship's properties.
 	 * 
@@ -149,4 +150,21 @@ public class EnemyShip extends Entity {
 	public final boolean isDestroyed() {
 		return this.isDestroyed;
 	}
+    /** Gives this ship its own shooting cooldown and starts it. */
+    public final void setShootingCooldown(final Cooldown cooldown) {
+        this.shootingCooldown = cooldown;
+        this.shootingCooldown.reset();
+    }
+
+    /** True if this ship is alive, allowed to shoot, and its cooldown is over. */
+    public final boolean canShoot() {
+        return !this.isDestroyed
+                && this.shootingCooldown != null
+                && this.shootingCooldown.checkFinished();
+    }
+
+    /** Restarts this ship's cooldown after it has fired. */
+    public final void resetShootingCooldown() {
+        this.shootingCooldown.reset();
+    }
 }

@@ -58,8 +58,8 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
 	/** List of enemy ships forming the formation. */
 	private List<List<EnemyShip>> enemyShips;
-	/** Minimum time between shots. */
-	private Cooldown shootingCooldown;
+    /** True once every shooter has received its own shooting cooldown. */
+    private boolean shootersStarted;
 	/** Number of ships in the formation - horizontally. */
 	private int nShipsWide;
 	/** Number of ships in the formation - vertically. */
@@ -190,11 +190,11 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	 * Updates the position of the ships.
 	 */
 	public final void update() {
-		if(this.shootingCooldown == null) {
-			this.shootingCooldown = Core.getVariableCooldown(shootingInterval,
-					shootingVariance);
-			this.shootingCooldown.reset();
-		}
+        if (!this.shootersStarted) {
+            for (EnemyShip shooter : this.shooters)
+                shooter.setShootingCooldown(createShooterCooldown());
+            this.shootersStarted = true;
+        }
 		
 		cleanUp();
 
@@ -330,17 +330,21 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	 * @param bullets
 	 *            Bullets set to add the bullet being shot.
 	 */
-	public final void shoot(final Set<Bullet> bullets) {
-		// For now, only ships in the bottom row are able to shoot.
-		int index = (int) (Math.random() * this.shooters.size());
-		EnemyShip shooter = this.shooters.get(index);
+    public final void shoot(final Set<Bullet> bullets) {
+        for (EnemyShip shooter : this.shooters) {
+            if (shooter.canShoot()) {
+                shooter.resetShootingCooldown();
+                bullets.add(BulletPool.getBullet(shooter.getPositionX()
+                        + shooter.width / 2, shooter.getPositionY(), BULLET_SPEED));
+            }
+        }
+    }
 
-		if (this.shootingCooldown.checkFinished()) {
-			this.shootingCooldown.reset();
-			bullets.add(BulletPool.getBullet(shooter.getPositionX()
-					+ shooter.width / 2, shooter.getPositionY(), BULLET_SPEED));
-		}
-	}
+    /** Creates a cooldown for one shooter, based on the level's settings. */
+    private Cooldown createShooterCooldown() {
+        return Core.getVariableCooldown(this.shootingInterval * this.nShipsWide,
+                this.shootingVariance * this.nShipsWide);
+    }
 
 	/**
 	 * Destroys a ship.
@@ -371,9 +375,10 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 			EnemyShip nextShooter = getNextShooter(this.enemyShips
 					.get(destroyedShipColumnIndex));
 
-			if (nextShooter != null)
-				this.shooters.set(destroyedShipIndex, nextShooter);
-			else {
+            if (nextShooter != null) {
+                nextShooter.setShootingCooldown(createShooterCooldown());
+                this.shooters.set(destroyedShipIndex, nextShooter);
+            } else {
 				this.shooters.remove(destroyedShipIndex);
 				this.logger.info("Shooters list reduced to "
 						+ this.shooters.size() + " members.");
