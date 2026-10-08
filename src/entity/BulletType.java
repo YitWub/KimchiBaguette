@@ -1,8 +1,8 @@
 package entity;
 
 public enum BulletType {
-    NORMAL(-12, 600, 1,0),
-    RAPID(-6, 750,2,100),
+    NORMAL(-12, 500, 1,0),
+    RAPID(-6, 1000,2,100),
     MULTI(-6, 1000,1,0);
 
     private final int speed;

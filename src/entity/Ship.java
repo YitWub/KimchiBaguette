@@ -79,10 +79,28 @@ public class Ship extends Entity {
 			bullets.add(BulletPool.getBullet(positionX + this.width / 2,
 					positionY, BULLET_SPEED));
 
+			// Set up burst shooting
 			remainingShots = currentBulletType.getShotCount() - 1;
 
 			shotDelay = System.currentTimeMillis() + 
 								currentBulletType.getShotDelay();
+			
+			// Set multi shot bullets
+			if(currentBulletType == BulletType.MULTI){
+				int x = positionX+ this.width / 2;
+				int y = positionY;
+				int speedY = BULLET_SPEED;
+				
+				// left
+				bullets.add(BulletPool.getBullet(x,y,speedY,-2));
+
+				// center
+				bullets.add(BulletPool.getBullet(x,y,speedY,0));
+
+				// right
+				bullets.add(BulletPool.getBullet(x,y,speedY,2));
+
+			}
 			
 			return true;
 		}
