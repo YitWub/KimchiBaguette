@@ -17,10 +17,10 @@ public class Ship extends Entity {
 
 	/** The type of bullet the ship is currently using	*/
 	private BulletType currentBulletType = BulletType.NORMAL;
-	
-	public void setBulletType(BulletType bulletType) {
-		this.currentBulletType = bulletType;
-	}
+	/** Remaining number of Bullets */
+	private int remainingShots = 0;
+	/** Delay between shots */
+	private long shotDelay = 0;
 
 	/** Time between shots. */
 	private int SHOOTING_INTERVAL = currentBulletType.getShootingInterval();
@@ -78,9 +78,34 @@ public class Ship extends Entity {
 			this.shootingCooldown.reset();
 			bullets.add(BulletPool.getBullet(positionX + this.width / 2,
 					positionY, BULLET_SPEED));
+
+			remainingShots = currentBulletType.getShotCount() - 1;
+
+			shotDelay = System.currentTimeMillis() + 
+								currentBulletType.getShotDelay();
+			
 			return true;
 		}
 		return false;
+	}
+
+	public int updateBurst(final Set<Bullet> bullets){
+		if(remainingShots <=0){
+			return 0;
+		}
+
+		long currentTime = System.currentTimeMillis();
+
+		if(currentTime >= shotDelay){
+			bullets.add(BulletPool.getBullet(
+					positionX + this.width / 2,
+					positionY, BULLET_SPEED));
+			remainingShots--;
+			shotDelay = currentTime + currentBulletType.getShotDelay();
+
+			return 1;
+		}
+		return 0;
 	}
 
 	/**
@@ -116,5 +141,9 @@ public class Ship extends Entity {
 	 */
 	public final int getSpeed() {
 		return SPEED;
+	}
+
+	public void setBulletType(BulletType bulletType) {
+		this.currentBulletType = bulletType;
 	}
 }
