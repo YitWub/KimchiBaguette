@@ -15,10 +15,17 @@ import engine.DrawManager.SpriteType;
  */
 public class Ship extends Entity {
 
+	/** The type of bullet the ship is currently using	*/
+	private BulletType currentBulletType = BulletType.NORMAL;
+	
+	public void setBulletType(BulletType bulletType) {
+		this.currentBulletType = bulletType;
+	}
+
 	/** Time between shots. */
-	private static final int SHOOTING_INTERVAL = 750;
+	private int SHOOTING_INTERVAL = currentBulletType.getShootingInterval();
 	/** Speed of the bullets shot by the ship. */
-	private static final int BULLET_SPEED = -6;
+	private int BULLET_SPEED = currentBulletType.getSpeed();
 	/** Movement of the ship for each unit of time. */
 	private static final int SPEED = 2;
 	
