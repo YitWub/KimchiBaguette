@@ -97,7 +97,9 @@ public class GameScreen extends Screen {
 		this.bonusLife = bonusLife;
 		this.level = gameState.getLevel();
 		this.score = gameState.getScore();
-		int initialLives = this.gameState.getLivesRemaining() + (this.bonusLife ? 1 : 0);
+
+		int initialLives = gameState.getLivesRemaining();
+		
 		this.playerStatus = new PlayerStatus(initialLives, 3);
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
