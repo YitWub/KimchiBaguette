@@ -48,7 +48,18 @@ public final class BulletPool {
 			bullet = new Bullet(positionX, positionY, speed);
 			bullet.setPositionX(positionX - bullet.getWidth() / 2);
 		}
+		
+		bullet.setSpeedX(0);
 		return bullet;
+	}
+
+	public static Bullet getBullet(
+        int x, int y, int speedY, int speedX) {
+
+    	Bullet bullet = getBullet(x, y, speedY);
+    	bullet.setSpeedX(speedX);
+
+    	return bullet;
 	}
 
 	/**

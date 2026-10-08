@@ -191,6 +191,11 @@ public class GameScreen extends Screen {
 			}
 
 			this.ship.update();
+
+			if (!this.ship.isDestroyed()) {
+    			this.bulletsShot += this.ship.updateBurst(this.bullets);
+			}
+
 			this.enemyShipFormation.update();
 			this.enemyShipFormation.shoot(this.bullets);
 		}
