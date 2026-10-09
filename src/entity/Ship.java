@@ -15,12 +15,14 @@ import engine.DrawManager.SpriteType;
  */
 public class Ship extends Entity {
 
-	/** Time between shots. */
-	private static final int SHOOTING_INTERVAL = 750;
+	/** Time between shots in milliseconds. */
+	private int shootingInterval;
 	/** Speed of the bullets shot by the ship. */
 	private static final int BULLET_SPEED = -6;
 	/** Movement of the ship for each unit of time. */
-	private static final int SPEED = 2;
+	private int speed;
+	/** Maximum lives supplied by the ship type. */
+	private final int maxLives;
 	
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
@@ -36,10 +38,27 @@ public class Ship extends Entity {
 	 *            Initial position of the ship in the Y axis.
 	 */
 	public Ship(final int positionX, final int positionY) {
+		this(positionX, positionY, ShipType.STANDARD);
+	}
+
+	/**
+	 * Creates a ship using the selected type's base stats.
+	 *
+	 * @param positionX Initial X position.
+	 * @param positionY Initial Y position.
+	 * @param shipType Source of speed, shooting interval and maximum lives.
+	 */
+	public Ship(final int positionX, final int positionY,
+			final ShipType shipType) {
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
+		if (shipType == null)
+			throw new IllegalArgumentException("Ship type cannot be null.");
 
 		this.spriteType = SpriteType.Ship;
-		this.shootingCooldown = Core.getCooldown(SHOOTING_INTERVAL);
+		this.maxLives = shipType.getMaxLives();
+		this.shootingCooldown = Core.getCooldown(shipType.getShootCooldown());
+		setSpeed(shipType.getSpeed());
+		setShootingInterval(shipType.getShootCooldown());
 		this.destructionCooldown = Core.getCooldown(1000);
 	}
 
@@ -48,7 +67,7 @@ public class Ship extends Entity {
 	 * reached.
 	 */
 	public final void moveRight() {
-		this.positionX += SPEED;
+		this.positionX += this.speed;
 	}
 
 	/**
@@ -56,7 +75,7 @@ public class Ship extends Entity {
 	 * reached.
 	 */
 	public final void moveLeft() {
-		this.positionX -= SPEED;
+		this.positionX -= this.speed;
 	}
 
 	/**
@@ -108,6 +127,35 @@ public class Ship extends Entity {
 	 * @return Speed of the ship.
 	 */
 	public final int getSpeed() {
-		return SPEED;
+		return this.speed;
+	}
+
+	/** @return Base shooting interval in milliseconds. */
+	public final int getShootingInterval() {
+		return this.shootingInterval;
+	}
+
+	/** @return Maximum lives supplied by the ship type. */
+	public final int getMaxLives() {
+		return this.maxLives;
+	}
+
+	/**
+	 * Changes base speed.
+	 * @param speed Positive movement distance per update.
+	 */
+	public final void setSpeed(final int speed) {
+		if (speed <= 0)
+			throw new IllegalArgumentException("Speed must be positive.");
+		this.speed = speed;
+	}
+
+	/**
+	 * Changes the firing interval while preserving the last shot's timestamp.
+	 * @param shootingInterval Positive interval in milliseconds.
+	 */
+	public final void setShootingInterval(final int shootingInterval) {
+		this.shootingCooldown.setDuration(shootingInterval);
+		this.shootingInterval = shootingInterval;
 	}
 }

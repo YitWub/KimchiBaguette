@@ -59,6 +59,19 @@ public class Cooldown {
 	}
 
 	/**
+	 * Changes a fixed cooldown's duration without resetting its start time.
+	 * @param milliseconds Positive duration in milliseconds.
+	 */
+	public final void setDuration(final int milliseconds) {
+		if (milliseconds <= 0)
+			throw new IllegalArgumentException("Cooldown duration must be positive.");
+		if (this.variance != 0)
+			throw new IllegalStateException("Cannot change a variable cooldown.");
+		this.milliseconds = milliseconds;
+		this.duration = milliseconds;
+	}
+
+	/**
 	 * Restarts the cooldown.
 	 */
 	public final void reset() {
