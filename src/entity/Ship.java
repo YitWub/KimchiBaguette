@@ -15,16 +15,20 @@ import engine.DrawManager.SpriteType;
  */
 public class Ship extends Entity {
 
+	/** Time between shots in milliseconds. */
+	private int shootingInterval;
 	/** Speed of the bullets shot by the ship. */
 	private static final int BULLET_SPEED = -6;
-	
-	/** Movement speed of the ship. */
+	/** Movement of the ship for each unit of time. */
 	private int speed;
+	/** Maximum lives supplied by the ship type. */
+	private final int maxLives;
+
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
 	/** Time spent inactive between hits. */
 	private Cooldown destructionCooldown;
-	
+
 	/** Type of ship selected by the player. */
 	private ShipType shipType;
 	/** Shield status indicator. */
@@ -32,7 +36,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Default constructor, uses the STANDARD ship configuration.
-	 * 
+	 *
 	 * @param positionX Initial position of the ship in the X axis.
 	 * @param positionY Initial position of the ship in the Y axis.
 	 */
@@ -41,19 +45,24 @@ public class Ship extends Entity {
 	}
 
 	/**
-	 * Constructor with selectable ship type.
-	 * 
-	 * @param positionX Initial position of the ship in the X axis.
-	 * @param positionY Initial position of the ship in the Y axis.
-	 * @param shipType  Selected ship type configuration.
+	 * Creates a ship using the selected type's base stats.
+	 *
+	 * @param positionX Initial X position.
+	 * @param positionY Initial Y position.
+	 * @param shipType Source of speed, shooting interval and maximum lives.
 	 */
-	public Ship(final int positionX, final int positionY, final ShipType shipType) {
+	public Ship(final int positionX, final int positionY,
+			final ShipType shipType) {
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
+		if (shipType == null)
+			throw new IllegalArgumentException("Ship type cannot be null.");
 
 		this.shipType = shipType;
-		this.speed = shipType.getSpeed();
 		this.spriteType = SpriteType.Ship;
+		this.maxLives = shipType.getMaxLives();
 		this.shootingCooldown = Core.getCooldown(shipType.getShootCooldown());
+		setSpeed(shipType.getSpeed());
+		setShootingInterval(shipType.getShootCooldown());
 		this.destructionCooldown = Core.getCooldown(1000);
 		this.shieldActive = shipType.hasShield();
 	}
@@ -74,7 +83,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Shoots a bullet upwards.
-	 * 
+	 *
 	 * @param bullets List of bullets on screen, to add the new bullet.
 	 * @return Checks if the bullet was shot correctly.
 	 */
@@ -107,7 +116,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Checks if the ship is destroyed.
-	 * 
+	 *
 	 * @return True if the ship is currently destroyed.
 	 */
 	public final boolean isDestroyed() {
@@ -116,16 +125,45 @@ public class Ship extends Entity {
 
 	/**
 	 * Getter for the ship's speed.
-	 * 
+	 *
 	 * @return Speed of the ship.
 	 */
 	public final int getSpeed() {
 		return this.speed;
 	}
 
+	/** @return Base shooting interval in milliseconds. */
+	public final int getShootingInterval() {
+		return this.shootingInterval;
+	}
+
+	/** @return Maximum lives supplied by the ship type. */
+	public final int getMaxLives() {
+		return this.maxLives;
+	}
+
+	/**
+	 * Changes base speed.
+	 * @param speed Positive movement distance per update.
+	 */
+	public final void setSpeed(final int speed) {
+		if (speed <= 0)
+			throw new IllegalArgumentException("Speed must be positive.");
+		this.speed = speed;
+	}
+
+	/**
+	 * Changes the firing interval while preserving the last shot's timestamp.
+	 * @param shootingInterval Positive interval in milliseconds.
+	 */
+	public final void setShootingInterval(final int shootingInterval) {
+		this.shootingCooldown.setDuration(shootingInterval);
+		this.shootingInterval = shootingInterval;
+	}
+
 	/**
 	 * Getter for the ship type.
-	 * 
+	 *
 	 * @return Current ShipType.
 	 */
 	public final ShipType getShipType() {
@@ -134,7 +172,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Checks if shield is active.
-	 * 
+	 *
 	 * @return True if shield is active.
 	 */
 	public final boolean isShieldActive() {
@@ -143,7 +181,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Sets the shield status.
-	 * 
+	 *
 	 * @param active Shield state.
 	 */
 	public final void setShieldActive(final boolean active) {
