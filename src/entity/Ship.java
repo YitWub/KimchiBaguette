@@ -23,19 +23,22 @@ public class Ship extends Entity {
 	private int speed;
 	/** Maximum lives supplied by the ship type. */
 	private final int maxLives;
-	
+
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
 	/** Time spent inactive between hits. */
 	private Cooldown destructionCooldown;
 
+	/** Type of ship selected by the player. */
+	private ShipType shipType;
+	/** Shield status indicator. */
+	private boolean shieldActive;
+
 	/**
-	 * Constructor, establishes the ship's properties.
-	 * 
-	 * @param positionX
-	 *            Initial position of the ship in the X axis.
-	 * @param positionY
-	 *            Initial position of the ship in the Y axis.
+	 * Default constructor, uses the STANDARD ship configuration.
+	 *
+	 * @param positionX Initial position of the ship in the X axis.
+	 * @param positionY Initial position of the ship in the Y axis.
 	 */
 	public Ship(final int positionX, final int positionY) {
 		this(positionX, positionY, ShipType.STANDARD);
@@ -54,25 +57,25 @@ public class Ship extends Entity {
 		if (shipType == null)
 			throw new IllegalArgumentException("Ship type cannot be null.");
 
+		this.shipType = shipType;
 		this.spriteType = SpriteType.Ship;
 		this.maxLives = shipType.getMaxLives();
 		this.shootingCooldown = Core.getCooldown(shipType.getShootCooldown());
 		setSpeed(shipType.getSpeed());
 		setShootingInterval(shipType.getShootCooldown());
 		this.destructionCooldown = Core.getCooldown(1000);
+		this.shieldActive = shipType.hasShield();
 	}
 
 	/**
-	 * Moves the ship speed uni ts right, or until the right screen border is
-	 * reached.
+	 * Moves the ship speed units right.
 	 */
 	public final void moveRight() {
 		this.positionX += this.speed;
 	}
 
 	/**
-	 * Moves the ship speed units left, or until the left screen border is
-	 * reached.
+	 * Moves the ship speed units left.
 	 */
 	public final void moveLeft() {
 		this.positionX -= this.speed;
@@ -80,9 +83,8 @@ public class Ship extends Entity {
 
 	/**
 	 * Shoots a bullet upwards.
-	 * 
-	 * @param bullets
-	 *            List of bullets on screen, to add the new bullet.
+	 *
+	 * @param bullets List of bullets on screen, to add the new bullet.
 	 * @return Checks if the bullet was shot correctly.
 	 */
 	public final boolean shoot(final Set<Bullet> bullets) {
@@ -114,7 +116,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Checks if the ship is destroyed.
-	 * 
+	 *
 	 * @return True if the ship is currently destroyed.
 	 */
 	public final boolean isDestroyed() {
@@ -123,7 +125,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Getter for the ship's speed.
-	 * 
+	 *
 	 * @return Speed of the ship.
 	 */
 	public final int getSpeed() {
@@ -157,5 +159,32 @@ public class Ship extends Entity {
 	public final void setShootingInterval(final int shootingInterval) {
 		this.shootingCooldown.setDuration(shootingInterval);
 		this.shootingInterval = shootingInterval;
+	}
+
+	/**
+	 * Getter for the ship type.
+	 *
+	 * @return Current ShipType.
+	 */
+	public final ShipType getShipType() {
+		return this.shipType;
+	}
+
+	/**
+	 * Checks if shield is active.
+	 *
+	 * @return True if shield is active.
+	 */
+	public final boolean isShieldActive() {
+		return this.shieldActive;
+	}
+
+	/**
+	 * Sets the shield status.
+	 *
+	 * @param active Shield state.
+	 */
+	public final void setShieldActive(final boolean active) {
+		this.shieldActive = active;
 	}
 }
