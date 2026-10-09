@@ -32,6 +32,15 @@ public class PlayerStatus {
 	}
 
 	/**
+	 * Creates life state using the configured ship's maximum lives.
+	 * @param initialLives Lives carried into this level.
+	 * @param ship Ship supplying the maximum-life stat.
+	 */
+	public PlayerStatus(final int initialLives, final Ship ship) {
+		this(initialLives, ship.getMaxLives());
+	}
+
+	/**
 	 * Processes incoming damage and reduces lives.
 	 *
 	 * @param damage

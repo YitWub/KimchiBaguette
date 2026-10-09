@@ -8,6 +8,8 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import entity.ShipType;
+
 import screen.GameScreen;
 import screen.HighScoreScreen;
 import screen.ScoreScreen;
@@ -29,8 +31,6 @@ public final class Core {
 	/** Max fps of current screen. */
 	private static final int FPS = 60;
 
-	/** Max lives. */
-	private static final int MAX_LIVES = 3;
 	/** Levels between extra life. */
 	private static final int EXTRA_LIFE_FRECUENCY = 3;
 	/** Total number of levels. */
@@ -116,7 +116,7 @@ public final class Core {
 
 		int returnCode = 1;
 		do {
-			gameState = new GameState(1, 0, MAX_LIVES, 0, 0);
+			gameState = new GameState(1, 0, getMaxLives(), 0, 0);
 
 			switch (returnCode) {
 			case 1:
@@ -133,7 +133,8 @@ public final class Core {
 					// One extra live every few levels.
 					boolean bonusLife = gameState.getLevel()
 							% EXTRA_LIFE_FRECUENCY == 0
-							&& gameState.getLivesRemaining() < MAX_LIVES;
+							&& gameState.getLivesRemaining()
+							< gameState.getShipType().getMaxLives();
 					
 					currentScreen = new GameScreen(gameState,
 							gameSettings.get(gameState.getLevel() - 1),
@@ -149,7 +150,7 @@ public final class Core {
 							gameState.getScore(),
 							gameState.getLivesRemaining(),
 							gameState.getBulletsShot(),
-							gameState.getShipsDestroyed());
+							gameState.getShipsDestroyed(), gameState.getShipType());
 
 				} while (gameState.getLivesRemaining() > 0
 						&& gameState.getLevel() <= NUM_LEVELS);
@@ -227,12 +228,12 @@ public final class Core {
 	}
 
 	/**
-	 * Returns the maximum number of player lives for the current game setup.
+	 * Returns the default ship's maximum lives for a new game.
 	 *
 	 * @return Maximum player lives.
 	 */
 	public static int getMaxLives() {
-		return MAX_LIVES;
+		return ShipType.STANDARD.getMaxLives();
 	}
 
 	/**
