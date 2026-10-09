@@ -1,42 +1,63 @@
 package entity;
 
 /**
- * Manages player status including lives and damage processing.
+ * Manages the player's discrete lives and damage processing. The current game
+ * does not model a separate health pool; one accepted hit consumes one life.
  */
 public class PlayerStatus {
 
-    private int lives;
-    private int maxLives;
+	/** Current number of lives. */
+	private int lives;
+	/** Maximum number of lives for the selected game setup. */
+	private final int maxLives;
 
-    public PlayerStatus(final int initialLives, final int maxLives) {
-        this.lives = initialLives;
-        this.maxLives = maxLives;
-    }
+	/**
+	 * Creates a valid player-life state.
+	 *
+	 * @param initialLives
+	 *            Initial number of lives.
+	 * @param maxLives
+	 *            Maximum number of lives.
+	 */
+	public PlayerStatus(final int initialLives, final int maxLives) {
+		if (maxLives <= 0)
+			throw new IllegalArgumentException(
+					"Maximum lives must be positive.");
+		if (initialLives < 0 || initialLives > maxLives)
+			throw new IllegalArgumentException(
+					"Initial lives must be between zero and the maximum.");
 
-    /**
-     * Processes incoming damage and reduces lives.
-     *
-     * @param damage Amount of damage to apply.
-     */
-    public void takeDamage(final int damage) {
-        if (damage <= 0) {
-            return;
-        }
-        this.lives -= damage;
-        if (this.lives < 0) {
-            this.lives = 0;
-        }
-    }
+		this.lives = initialLives;
+		this.maxLives = maxLives;
+	}
 
-    public int getLives() {
-        return this.lives;
-    }
+	/**
+	 * Processes incoming damage and reduces lives.
+	 *
+	 * @param damage
+	 *            Amount of damage to apply.
+	 * @return Whether damage was applied.
+	 */
+	public final boolean takeDamage(final int damage) {
+		if (damage <= 0 || !isAlive())
+			return false;
 
-    public int getMaxLives() {
-        return this.maxLives;
-    }
+		this.lives = Math.max(0, this.lives - damage);
+		return true;
+	}
 
-    public boolean isAlive() {
-        return this.lives > 0;
-    }
+	/** @return Current number of lives. */
+	public final int getLives() {
+		return this.lives;
+	}
+
+	/** @return Maximum number of lives. */
+	public final int getMaxLives() {
+		return this.maxLives;
+	}
+
+	/** @return Whether at least one life remains. */
+	public final boolean isAlive() {
+		return this.lives > 0;
+	}
 }
