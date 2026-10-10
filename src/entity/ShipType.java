@@ -1,13 +1,18 @@
 package entity;
 
+/**
+ * Represents the different types of player ships with unique gameplay attributes.
+ * Part of the Player Ship System requirements.
+ */
 public enum ShipType {
-    STANDARD("Standard", 2, 750, 3, false),
+    // Name, Speed, FireRateCooldown (ms), Lives, ShieldAbility
+    STANDARD("Standard Ship", 2, 750, 3, false),
     SPEEDSTER("Speedster", 4, 400, 2, false),
-    TANK("Tank", 1, 1000, 5, true);
+    TANK("Heavy Tank", 1, 1000, 5, true);
 
     private final String name;
     private final int speed;
-    private final int shootCooldown;
+    private final int shootCooldown; // Intervalle de tir en ms
     private final int maxLives;
     private final boolean hasShield;
 
