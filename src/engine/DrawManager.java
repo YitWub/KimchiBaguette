@@ -556,4 +556,38 @@ public final class DrawManager {
 			drawCenteredBigString(screen, "GO!", screen.getHeight() / 2
 					+ fontBigMetrics.getHeight() / 3);
 	}
+
+    /**
+     * Draws the ship selection menu.
+     *
+     * @param screen Screen to draw on.
+     * @param selectedIndex Index of the currently selected ship.
+     * @param shipTypes Array of available ship types.
+     */
+    public void drawShipSelection(final Screen screen, final int selectedIndex,
+                                  final entity.ShipType[] shipTypes) {
+        backBufferGraphics.setColor(Color.GREEN);
+        drawCenteredBigString(screen, "SELECT SHIP", screen.getHeight() / 5);
+
+        for (int i = 0; i < shipTypes.length; i++) {
+            boolean isSelected = (i == selectedIndex);
+            entity.ShipType type = shipTypes[i];
+
+            if (isSelected) {
+                backBufferGraphics.setColor(Color.GREEN);
+            } else {
+                backBufferGraphics.setColor(Color.WHITE);
+            }
+
+            String prefix = isSelected ? "> " : "  ";
+            String title = prefix + type.getName();
+            String stats = "  Speed: " + type.getSpeed() + " | HP: " + type.getMaxLives();
+
+            drawCenteredRegularString(screen, title, screen.getHeight() / 2 - 30 + i * 50);
+            drawCenteredRegularString(screen, stats, screen.getHeight() / 2 - 10 + i * 50);
+        }
+
+        backBufferGraphics.setColor(Color.GRAY);
+        drawCenteredRegularString(screen, "Press SPACE to launch", screen.getHeight() * 9 / 10);
+    }
 }
