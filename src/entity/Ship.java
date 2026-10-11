@@ -15,12 +15,12 @@ import engine.DrawManager.SpriteType;
  */
 public class Ship extends Entity {
 
-	/** Time between shots. */
-	private static final int SHOOTING_INTERVAL = 750;
+	/** Time between shots in milliseconds. */
+	private int shootingInterval = 750;
 	/** Speed of the bullets shot by the ship. */
 	private static final int BULLET_SPEED = -6;
-	/** Movement of the ship for each unit of time. */
-	private static final int SPEED = 2;
+	/** Movement speed of the ship. */
+	private int speed = 2;
 	
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
@@ -39,7 +39,7 @@ public class Ship extends Entity {
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
 		this.spriteType = SpriteType.Ship;
-		this.shootingCooldown = Core.getCooldown(SHOOTING_INTERVAL);
+		this.shootingCooldown = Core.getCooldown(this.shootingInterval);
 		this.destructionCooldown = Core.getCooldown(1000);
 	}
 
@@ -48,7 +48,7 @@ public class Ship extends Entity {
 	 * reached.
 	 */
 	public final void moveRight() {
-		this.positionX += SPEED;
+		this.positionX += this.speed;
 	}
 
 	/**
@@ -56,7 +56,7 @@ public class Ship extends Entity {
 	 * reached.
 	 */
 	public final void moveLeft() {
-		this.positionX -= SPEED;
+		this.positionX -= this.speed;
 	}
 
 	/**
@@ -108,6 +108,34 @@ public class Ship extends Entity {
 	 * @return Speed of the ship.
 	 */
 	public final int getSpeed() {
-		return SPEED;
+		return this.speed;
+	}
+
+	/** @return Time between shots in milliseconds. */
+	public final int getShootingInterval() {
+		return this.shootingInterval;
+	}
+
+	/**
+	 * Changes the ship's movement speed.
+	 *
+	 * @param speed
+	 *            Positive movement distance per update.
+	 */
+	public final void setSpeed(final int speed) {
+		if (speed <= 0)
+			throw new IllegalArgumentException("Speed must be positive.");
+		this.speed = speed;
+	}
+
+	/**
+	 * Changes the firing interval without restarting the current cooldown.
+	 *
+	 * @param shootingInterval
+	 *            Positive interval in milliseconds.
+	 */
+	public final void setShootingInterval(final int shootingInterval) {
+		this.shootingCooldown.setDuration(shootingInterval);
+		this.shootingInterval = shootingInterval;
 	}
 }
