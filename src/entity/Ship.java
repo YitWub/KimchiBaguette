@@ -22,10 +22,10 @@ public class Ship extends Entity {
 	/** Remaining number of Bullets */
 	private int remainingShots = 0;
 	/** Delay between shots */
-	private long shotDelay = 0;
+	private long nextShotTime = 0;
 
 	/** Speed of the bullets shot by the ship. */
-	private int BULLET_SPEED = currentBulletType.getSpeed();
+	private int bulletSpeed = currentBulletType.getSpeed();
 	/** Movement of the ship for each unit of time. */
 	private final int SPEED;
 	
@@ -53,7 +53,7 @@ public class Ship extends Entity {
 		this.SPEED = shipType.getSpeed();
 
 		this.currentBulletType = shipType.getBulletType();
-		this.BULLET_SPEED = currentBulletType.getSpeed();
+		this.bulletSpeed = currentBulletType.getSpeed();
 
 		this.spriteType = SpriteType.Ship;
 
@@ -84,60 +84,69 @@ public class Ship extends Entity {
 	 *            List of bullets on screen, to add the new bullet.
 	 * @return Checks if the bullet was shot correctly.
 	 */
-	public final boolean shoot(final Set<Bullet> bullets) {
-		if (this.shootingCooldown.checkFinished()) {
-			this.shootingCooldown.reset();
-
-			if(currentBulletType != BulletType.MULTI){
-				bullets.add(BulletPool.getBullet(positionX + this.width / 2,
-						positionY, BULLET_SPEED));
-			}
-
-			// Set up burst shooting
-			remainingShots = currentBulletType.getShotCount() - 1;
-
-			shotDelay = System.currentTimeMillis() + 
-								currentBulletType.getShotDelay();
-			
-			// Set multi shot bullets
-			if(currentBulletType == BulletType.MULTI){
-				int x = positionX+ this.width / 2;
-				int y = positionY;
-				int speedY = BULLET_SPEED;
-				
-				// left
-				bullets.add(BulletPool.getBullet(x,y,speedY,-2));
-
-				// center
-				bullets.add(BulletPool.getBullet(x,y,speedY,0));
-
-				// right
-				bullets.add(BulletPool.getBullet(x,y,speedY,2));
-
-			}
-			
-			return true;
+	public final int shoot(final Set<Bullet> bullets) {
+		if (!this.shootingCooldown.checkFinished()) {
+			return 0;
 		}
-		return false;
+
+		this.shootingCooldown.reset();
+
+		int x = positionX + this.width / 2;
+		int y = positionY;
+
+		if (currentBulletType == BulletType.MULTI) {
+			int count = 0;
+
+			if (bullets.add(BulletPool.getBullet(x, y, bulletSpeed, -2)))
+				count++;
+
+			if (bullets.add(BulletPool.getBullet(x, y, bulletSpeed, 0)))
+				count++;
+
+			if (bullets.add(BulletPool.getBullet(x, y, bulletSpeed, 2)))
+				count++;
+
+			return count;
+		}
+
+		boolean added = bullets.add(
+				BulletPool.getBullet(x, y, bulletSpeed));
+
+		remainingShots = currentBulletType.getShotCount() - 1;
+		nextShotTime = System.currentTimeMillis()
+				+ currentBulletType.getShotDelay();
+
+		return added ? 1 : 0;
 	}
 
-	public int updateBurst(final Set<Bullet> bullets){
-		if(remainingShots <=0){
+	/**
+	 * Fires remaining bullets in a RAPID burst.
+	 *
+	 * @param bullets Bullets currently on screen.
+	 * @return Number of bullets successfully added.
+	 */
+	public final int updateBurst(final Set<Bullet> bullets) {
+		if (this.remainingShots <= 0 || this.isDestroyed()) {
 			return 0;
 		}
 
 		long currentTime = System.currentTimeMillis();
 
-		if(currentTime >= shotDelay){
-			bullets.add(BulletPool.getBullet(
-					positionX + this.width / 2,
-					positionY, BULLET_SPEED));
-			remainingShots--;
-			shotDelay = currentTime + currentBulletType.getShotDelay();
-
-			return 1;
+		if (currentTime < this.nextShotTime) {
+			return 0;
 		}
-		return 0;
+
+		int x = this.positionX + this.width / 2;
+		int y = this.positionY;
+
+		boolean added = bullets.add(
+				BulletPool.getBullet(x, y, this.bulletSpeed));
+
+		this.remainingShots--;
+		this.nextShotTime = currentTime
+				+ this.currentBulletType.getShotDelay();
+
+		return added ? 1 : 0;
 	}
 
 	/**
@@ -158,7 +167,7 @@ public class Ship extends Entity {
 
 		// Cancel pending brust shots
 		this.remainingShots = 0;
-		this.shotDelay = 0;
+		this.nextShotTime = 0;
 	}
 
 	/**
@@ -182,10 +191,10 @@ public class Ship extends Entity {
 	public void setBulletType(BulletType bulletType) {
 		this.currentBulletType = bulletType;
 
-		this.BULLET_SPEED = bulletType.getSpeed();
+		this.bulletSpeed = bulletType.getSpeed();
 
 		this.shootingCooldown = Core.getCooldown(shipType.getShootingInterval());
 		this.remainingShots =0;
-		this.shotDelay = 0;
+		this.nextShotTime = 0;
 	}
 }
