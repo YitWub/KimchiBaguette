@@ -227,6 +227,15 @@ public final class Core {
 	}
 
 	/**
+	 * Returns the maximum number of player lives for the current game setup.
+	 *
+	 * @return Maximum player lives.
+	 */
+	public static int getMaxLives() {
+		return MAX_LIVES;
+	}
+
+	/**
 	 * Controls creation of new cooldowns.
 	 * 
 	 * @param milliseconds
