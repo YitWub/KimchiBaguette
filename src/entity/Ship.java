@@ -17,8 +17,6 @@ public class Ship extends Entity {
 
 	/** The type of bullet the ship is currently using	*/
 	private BulletType currentBulletType = BulletType.NORMAL;
-	/** The type of ship */
-	private ShipType shipType;
 	/** Remaining number of Bullets */
 	private int remainingShots = 0;
 	/** Delay between shots */
@@ -51,7 +49,6 @@ public class Ship extends Entity {
 	public Ship(final int positionX, final int positionY, final ShipType shipType) {
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
-		this.shipType = shipType;
 		this.speed = shipType.getSpeed();
 		this.shootingInterval = shipType.getShootingInterval();
 
