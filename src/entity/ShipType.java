@@ -5,9 +5,9 @@ package entity;
  */
 public enum ShipType {
 
-    STANDARD("Standard Ship", 2, 750, 3, false),
-    SPEEDSTER("Speedster", 4, 400, 2, false),
-    TANK("Heavy Tank", 1, 1000, 5, true);
+    STANDARD("Standard Ship", 2, 500, 3, false),
+    SPEEDSTER("Speedster", 4, 1000, 2, false),
+    TANK("Heavy Tank", 1, 1200, 5, true);
 
     /** Name displayed to the player. */
     private final String name;
@@ -70,5 +70,6 @@ public enum ShipType {
                 return BulletType.NORMAL;
         }
     }
+
 }
 

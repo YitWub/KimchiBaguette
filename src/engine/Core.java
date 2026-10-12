@@ -14,7 +14,6 @@ import screen.ScoreScreen;
 import screen.Screen;
 import screen.TitleScreen;
 
-import entity.BulletType;
 import entity.ShipType;
 import screen.ShipSelectionScreen;
 
@@ -141,7 +140,6 @@ public final class Core {
 					if(selectedShip == null){
 						selectedShip = ShipType.STANDARD;
 					}
-					BulletType selectedBulletType = shipSelectionScreen.getSelectedShip().getBulletType();
 				// Game & score.
 				do {
 					// One extra live every few levels.
@@ -151,7 +149,7 @@ public final class Core {
 					
 					currentScreen = new GameScreen(gameState,
 							gameSettings.get(gameState.getLevel() - 1),
-							bonusLife, width, height, FPS,selectedBulletType);
+							bonusLife, width, height, FPS,selectedShip);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " game screen at " + FPS + " fps.");
 					frame.setScreen(currentScreen);

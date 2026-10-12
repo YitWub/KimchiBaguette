@@ -16,18 +16,18 @@ import engine.DrawManager.SpriteType;
 public class Ship extends Entity {
 
 	/** The type of bullet the ship is currently using	*/
-	private BulletType currentBulletType = BulletType.MULTI;
+	private BulletType currentBulletType = BulletType.NORMAL;
+	/** The type of ship */
+	private ShipType shipType;
 	/** Remaining number of Bullets */
 	private int remainingShots = 0;
 	/** Delay between shots */
 	private long shotDelay = 0;
 
-	/** Time between shots. */
-	private int SHOOTING_INTERVAL = currentBulletType.getShootingInterval();
 	/** Speed of the bullets shot by the ship. */
 	private int BULLET_SPEED = currentBulletType.getSpeed();
 	/** Movement of the ship for each unit of time. */
-	private static final int SPEED = 2;
+	private final int SPEED;
 	
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
@@ -42,11 +42,22 @@ public class Ship extends Entity {
 	 * @param positionY
 	 *            Initial position of the ship in the Y axis.
 	 */
-	public Ship(final int positionX, final int positionY) {
+	public Ship(final int posidionX, final int positionY){
+		this(posidionX, positionY, ShipType.STANDARD);
+	}
+
+	public Ship(final int positionX, final int positionY, final ShipType shipType) {
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
+		this.shipType = shipType;
+		this.SPEED = shipType.getSpeed();
+
+		this.currentBulletType = shipType.getBulletType();
+		this.BULLET_SPEED = currentBulletType.getSpeed();
+
 		this.spriteType = SpriteType.Ship;
-		this.shootingCooldown = Core.getCooldown(SHOOTING_INTERVAL);
+
+		this.shootingCooldown = Core.getCooldown(shipType.getShootingInterval());
 		this.destructionCooldown = Core.getCooldown(1000);
 	}
 
@@ -144,6 +155,10 @@ public class Ship extends Entity {
 	 */
 	public final void destroy() {
 		this.destructionCooldown.reset();
+
+		// Cancel pending brust shots
+		this.remainingShots = 0;
+		this.shotDelay = 0;
 	}
 
 	/**
@@ -168,9 +183,9 @@ public class Ship extends Entity {
 		this.currentBulletType = bulletType;
 
 		this.BULLET_SPEED = bulletType.getSpeed();
-		this.SHOOTING_INTERVAL = bulletType.getShootingInterval();
 
-		this.shootingCooldown = Core.getCooldown(SHOOTING_INTERVAL);
+		this.shootingCooldown = Core.getCooldown(shipType.getShootingInterval());
 		this.remainingShots =0;
+		this.shotDelay = 0;
 	}
 }
