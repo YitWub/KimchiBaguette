@@ -8,6 +8,7 @@ import engine.Cooldown;
 import engine.Core;
 import engine.GameSettings;
 import engine.GameState;
+import entity.Boss;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.EnemyShip;
@@ -47,6 +48,8 @@ public class GameScreen extends Screen {
 	private EnemyShipFormation enemyShipFormation;
 	/** Player's ship. */
 	private Ship ship;
+	/** Boss of the level. */
+	private Boss boss;
 	/** Bonus enemy ship that appears sometimes. */
 	private EnemyShip enemyShipSpecial;
 	/** Minimum time between bonus ship appearances. */
@@ -115,6 +118,8 @@ public class GameScreen extends Screen {
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
 		this.ship = new Ship(this.width / 2, this.height - 30);
+		// TODO: spawn only on boss levels (Level Design System).
+		this.boss = new Boss(this.width / 2, 78, Boss.BossType.BOSS_A);
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
@@ -192,6 +197,8 @@ public class GameScreen extends Screen {
 				this.enemyShipSpecial = null;
 				this.logger.info("The special ship has escaped");
 			}
+			if (this.boss != null)
+				this.boss.update(1, this.width - 1);
 
 			this.ship.update();
 			this.enemyShipFormation.update();
@@ -225,6 +232,10 @@ public class GameScreen extends Screen {
 			drawManager.drawEntity(this.enemyShipSpecial,
 					this.enemyShipSpecial.getPositionX(),
 					this.enemyShipSpecial.getPositionY());
+
+		if (this.boss != null)
+			drawManager.drawEntity(this.boss, this.boss.getPositionX(),
+					this.boss.getPositionY());
 
 		enemyShipFormation.draw();
 
