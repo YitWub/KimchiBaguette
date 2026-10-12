@@ -16,7 +16,7 @@ import engine.DrawManager.SpriteType;
 public class Ship extends Entity {
 
 	/** The type of bullet the ship is currently using	*/
-	private BulletType currentBulletType = BulletType.NORMAL;
+	private BulletType currentBulletType = BulletType.MULTI;
 	/** Remaining number of Bullets */
 	private int remainingShots = 0;
 	/** Delay between shots */
@@ -76,8 +76,11 @@ public class Ship extends Entity {
 	public final boolean shoot(final Set<Bullet> bullets) {
 		if (this.shootingCooldown.checkFinished()) {
 			this.shootingCooldown.reset();
-			bullets.add(BulletPool.getBullet(positionX + this.width / 2,
-					positionY, BULLET_SPEED));
+
+			if(currentBulletType != BulletType.MULTI){
+				bullets.add(BulletPool.getBullet(positionX + this.width / 2,
+						positionY, BULLET_SPEED));
+			}
 
 			// Set up burst shooting
 			remainingShots = currentBulletType.getShotCount() - 1;
@@ -163,5 +166,11 @@ public class Ship extends Entity {
 
 	public void setBulletType(BulletType bulletType) {
 		this.currentBulletType = bulletType;
+
+		this.BULLET_SPEED = bulletType.getSpeed();
+		this.SHOOTING_INTERVAL = bulletType.getShootingInterval();
+
+		this.shootingCooldown = Core.getCooldown(SHOOTING_INTERVAL);
+		this.remainingShots =0;
 	}
 }

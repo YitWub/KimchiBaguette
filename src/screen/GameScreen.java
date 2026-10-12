@@ -10,6 +10,7 @@ import engine.GameSettings;
 import engine.GameState;
 import entity.Bullet;
 import entity.BulletPool;
+import entity.BulletType;
 import entity.EnemyShip;
 import entity.EnemyShipFormation;
 import entity.Entity;
@@ -71,6 +72,8 @@ public class GameScreen extends Screen {
 	private boolean levelFinished;
 	/** Checks if a bonus life is received. */
 	private boolean bonusLife;
+	/** bullet type */
+	private BulletType selectedBulletType;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
@@ -90,13 +93,15 @@ public class GameScreen extends Screen {
 	 */
 	public GameScreen(final GameState gameState,
 			final GameSettings gameSettings, final boolean bonusLife,
-			final int width, final int height, final int fps) {
+			final int width, final int height, final int fps,
+			final BulletType selectedBulletType) {
 		super(width, height, fps);
 
 		this.gameSettings = gameSettings;
 		this.bonusLife = bonusLife;
 		this.level = gameState.getLevel();
 		this.score = gameState.getScore();
+		this.selectedBulletType = selectedBulletType;
 
 		int initialLives = gameState.getLivesRemaining()
 				+ (this.bonusLife ? 1 : 0);
@@ -115,6 +120,7 @@ public class GameScreen extends Screen {
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
 		this.ship = new Ship(this.width / 2, this.height - 30);
+		this.ship.setBulletType(selectedBulletType);
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
