@@ -39,6 +39,10 @@ public class GameScreen extends Screen {
 	private static final int SCREEN_CHANGE_INTERVAL = 1500;
 	/** Height of the interface separation line. */
 	private static final int SEPARATION_LINE_HEIGHT = 40;
+	/** Damage dealt to the boss by one player bullet. */
+	private static final int BOSS_DAMAGE_PER_HIT = 50;
+	/** Time the boss explosion stays on screen. */
+	private static final int BOSS_EXPLOSION_TIME = 500;
 
 	/** Current game difficulty settings. */
 	private GameSettings gameSettings;
@@ -50,6 +54,8 @@ public class GameScreen extends Screen {
 	private Ship ship;
 	/** Boss of the level. */
 	private Boss boss;
+	/** Time the defeated boss stays on screen as an explosion. */
+	private Cooldown bossExplosionCooldown;
 	/** Bonus enemy ship that appears sometimes. */
 	private EnemyShip enemyShipSpecial;
 	/** Minimum time between bonus ship appearances. */
@@ -120,6 +126,7 @@ public class GameScreen extends Screen {
 		this.ship = new Ship(this.width / 2, this.height - 30);
 		// TODO: spawn only on boss levels (Level Design System).
 		this.boss = new Boss(this.width / 2, 78, Boss.BossType.BOSS_A);
+		this.bossExplosionCooldown = Core.getCooldown(BOSS_EXPLOSION_TIME);
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
@@ -197,8 +204,13 @@ public class GameScreen extends Screen {
 				this.enemyShipSpecial = null;
 				this.logger.info("The special ship has escaped");
 			}
-			if (this.boss != null)
+			if (this.boss != null) {
 				this.boss.update(1, this.width - 1);
+				// Removes the boss once its explosion has been shown.
+				if (this.boss.isDefeated()
+						&& this.bossExplosionCooldown.checkFinished())
+					this.boss = null;
+			}
 
 			this.ship.update();
 			this.enemyShipFormation.update();
@@ -313,6 +325,19 @@ public class GameScreen extends Screen {
 					this.enemyShipSpecial.destroy();
 					this.enemyShipSpecialExplosionCooldown.reset();
 					recyclable.add(bullet);
+				}
+				if (this.boss != null && !this.boss.isDefeated()
+						&& checkCollision(bullet, this.boss)) {
+					this.boss.takeDamage(BOSS_DAMAGE_PER_HIT);
+					recyclable.add(bullet);
+					this.logger.info("Boss hit: "
+							+ this.boss.getCurrentHealth() + "/"
+							+ this.boss.getMaxHealth() + ", phase "
+							+ this.boss.getPhase());
+					if (this.boss.isDefeated()) {
+						this.bossExplosionCooldown.reset();
+						this.logger.info("Boss defeated");
+					}
 				}
 			}
 		this.bullets.removeAll(recyclable);

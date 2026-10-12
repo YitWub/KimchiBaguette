@@ -48,6 +48,10 @@ public class Boss extends Entity {
     private static final double PHASE_2_THRESHOLD = 0.6;
     /** Phase 3 starts below this share of max health. */
     private static final double PHASE_3_THRESHOLD = 0.3;
+    /** Extra speed added in phase 2. */
+    private static final int PHASE_2_SPEED_BONUS = 1;
+    /** Extra speed added in phase 3. */
+    private static final int PHASE_3_SPEED_BONUS = 2;
 
     /** Kind of this boss. */
     private final BossType type;
@@ -101,6 +105,10 @@ public class Boss extends Entity {
         if (this.state == State.DEFEATED)
             return;
 
+        // A hit only lasts one frame, then the boss keeps moving.
+        if (this.state == State.HIT)
+            this.state = State.MOVING;
+
         this.positionX += this.speed * this.direction;
 
         if (this.positionX < leftLimit) {
@@ -122,10 +130,20 @@ public class Boss extends Entity {
      *            Amount of health to remove.
      */
     public final void takeDamage(final int damage) {
-        // TODO (Dev 1): ignore if already defeated.
-        // TODO (Dev 1): lower currentHealth, keep it between 0 and maxHealth.
-        // TODO (Dev 1): call updatePhase().
-        // TODO (Dev 1): if health is 0, call defeat().
+        if (this.state == State.DEFEATED)
+            return;
+
+        this.currentHealth -= damage;
+        if (this.currentHealth < 0)
+            this.currentHealth = 0;
+        if (this.currentHealth > this.maxHealth)
+            this.currentHealth = this.maxHealth;
+
+        this.state = State.HIT;
+        updatePhase();
+
+        if (this.currentHealth == 0)
+            defeat();
     }
 
     /**
@@ -133,16 +151,23 @@ public class Boss extends Entity {
      * Each threshold is applied only once and the phase never goes back.
      */
     private void updatePhase() {
-        // TODO (Dev 1): below PHASE_2_THRESHOLD -> phase 2,
-        // below PHASE_3_THRESHOLD -> phase 3.
-        // TODO (Dev 1): raise this.speed when the phase goes up.
+        double healthRatio = (double) this.currentHealth / this.maxHealth;
+
+        if (this.phase < 3 && healthRatio < PHASE_3_THRESHOLD) {
+            this.phase = 3;
+            this.speed = this.type.getSpeed() + PHASE_3_SPEED_BONUS;
+        } else if (this.phase < 2 && healthRatio < PHASE_2_THRESHOLD) {
+            this.phase = 2;
+            this.speed = this.type.getSpeed() + PHASE_2_SPEED_BONUS;
+        }
     }
 
     /**
      * Marks the boss as defeated and stops its movement.
      */
     private void defeat() {
-        // TODO (Dev 1): set state to DEFEATED, show explosion sprite.
+        this.state = State.DEFEATED;
+        this.spriteType = SpriteType.Explosion;
     }
 
     public final BossType getType() {
