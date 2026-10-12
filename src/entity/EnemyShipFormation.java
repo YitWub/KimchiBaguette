@@ -36,6 +36,12 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	private static final int X_SPEED = 8;
 	/** Downwards speed of the formation. */
 	private static final int Y_SPEED = 4;
+    /** Horizontal speed of the wave movement. */
+    private static final int WAVE_X_SPEED = 6;
+    /** Maximum vertical amplitude of the wave. */
+    private static final int WAVE_AMPLITUDE = 25;
+    /** Frequency of the vertical oscillation. */
+    private static final double WAVE_FREQUENCY = 0.15;
 	/** Speed of the bullets shot by the members. */
 	private static final int BULLET_SPEED = 4;
 	/** Proportion of differences between shooting times. */
@@ -105,6 +111,26 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		DOWN
 	};
 
+    /**
+     * Available movement patterns for enemy formations.
+     */
+    private enum MovementPattern {
+        CLASSIC,
+        WAVE_BOUNCE,
+        DIAGONAL_BOUNCE
+    }
+
+    /** Current movement pattern. */
+    private MovementPattern movementPattern;
+    /** Horizontal direction: 1 = right, -1 = left. */
+    private int waveDirection = 1;
+
+    /** Current phase of the wave. */
+    private double wavePhase = 0;
+
+    /** Reference vertical position of the formation. */
+    private int waveBaseY;
+
 	/**
 	 * Constructor, sets the initial conditions.
 	 * 
@@ -126,6 +152,8 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		this.movementSpeed = this.baseSpeed;
 		this.positionX = INIT_POS_X;
 		this.positionY = INIT_POS_Y;
+        this.waveBaseY = INIT_POS_Y;
+        this.movementPattern = MovementPattern.WAVE_BOUNCE;
 		this.shooters = new ArrayList<EnemyShip>();
 		SpriteType spriteType;
 
@@ -186,7 +214,55 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 						enemyShip.getPositionY());
 	}
 
-	/**
+
+    /**
+     * Calculates a wave movement with horizontal bouncing.
+     * Keeps the formation inside the screen boundaries.
+     */
+    private int[] moveWaveBounce() {
+
+        // Horizontal boundaries
+        int minX = SIDE_MARGIN;
+        int maxX = screen.getWidth() - SIDE_MARGIN - width;
+
+        // Vertical boundaries
+        int minY = INIT_POS_Y;
+        int maxY = screen.getHeight() - BOTTOM_MARGIN - height;
+
+        // Horizontal movement
+        int nextX = positionX + WAVE_X_SPEED * waveDirection;
+
+        // Bounce at horizontal edges
+        if (nextX >= maxX) {
+            nextX = maxX;
+            waveDirection = -1;
+        } else if (nextX <= minX) {
+            nextX = minX;
+            waveDirection = 1;
+        }
+
+        // Vertical wave oscillation
+        wavePhase += WAVE_FREQUENCY;
+
+        int amplitude = Math.min(WAVE_AMPLITUDE,
+                Math.max(0, (maxY - minY) / 2));
+
+        int centerY = Math.max(minY,
+                Math.min(waveBaseY + amplitude, maxY - amplitude));
+
+        int nextY = centerY
+                + (int) Math.round(amplitude * Math.sin(wavePhase));
+
+        // Prevent movement beyond vertical boundaries
+        nextY = Math.max(minY, Math.min(nextY, maxY));
+
+        return new int[] {
+                nextX - positionX,
+                nextY - positionY
+        };
+    }
+
+    /**
 	 * Updates the position of the ships.
 	 */
 	public final void update() {
@@ -209,6 +285,15 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		movementInterval++;
 		if (movementInterval >= this.movementSpeed) {
 			movementInterval = 0;
+
+            if (movementPattern == MovementPattern.WAVE_BOUNCE) {
+
+                int[] waveMovement = moveWaveBounce();
+
+                movementX = waveMovement[0];
+                movementY = waveMovement[1];
+
+            } else {
 
 			boolean isAtBottom = positionY
 					+ this.height > screen.getHeight() - BOTTOM_MARGIN;
@@ -254,6 +339,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 				movementX = -X_SPEED;
 			else
 				movementY = Y_SPEED;
+            }
 
 			positionX += movementX;
 			positionY += movementY;
