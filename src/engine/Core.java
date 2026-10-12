@@ -13,6 +13,8 @@ import screen.HighScoreScreen;
 import screen.ScoreScreen;
 import screen.Screen;
 import screen.TitleScreen;
+import screen.ShipSelectionScreen;
+import entity.ShipType;
 
 /**
  * Implements core game logic.
@@ -128,6 +130,14 @@ public final class Core {
 				LOGGER.info("Closing title screen.");
 				break;
 			case 2:
+                // Ship selection screen before the game starts.
+                currentScreen = new ShipSelectionScreen(width, height, FPS);
+                LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
+                        + " ship selection screen at " + FPS + " fps.");
+                frame.setScreen(currentScreen);
+                LOGGER.info("Closing ship selection screen.");
+                ShipType selectedShip = ((ShipSelectionScreen) currentScreen).getSelectedShip();
+
 				// Game & score.
 				do {
 					// One extra live every few levels.
