@@ -23,11 +23,13 @@ public class Ship extends Entity {
 	private int remainingShots = 0;
 	/** Delay between shots */
 	private long nextShotTime = 0;
+	/** shooting interval */
+	private int shootingInterval;
 
 	/** Speed of the bullets shot by the ship. */
 	private int bulletSpeed = currentBulletType.getSpeed();
 	/** Movement of the ship for each unit of time. */
-	private final int SPEED;
+	private int speed;
 	
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
@@ -50,14 +52,15 @@ public class Ship extends Entity {
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
 		this.shipType = shipType;
-		this.SPEED = shipType.getSpeed();
+		this.speed = shipType.getSpeed();
+		this.shootingInterval = shipType.getShootingInterval();
 
 		this.currentBulletType = shipType.getBulletType();
 		this.bulletSpeed = currentBulletType.getSpeed();
 
 		this.spriteType = SpriteType.Ship;
 
-		this.shootingCooldown = Core.getCooldown(shipType.getShootingInterval());
+		this.shootingCooldown = Core.getCooldown(this.getShootingInterval());
 		this.destructionCooldown = Core.getCooldown(1000);
 	}
 
@@ -66,7 +69,7 @@ public class Ship extends Entity {
 	 * reached.
 	 */
 	public final void moveRight() {
-		this.positionX += SPEED;
+		this.positionX += speed;
 	}
 
 	/**
@@ -74,7 +77,7 @@ public class Ship extends Entity {
 	 * reached.
 	 */
 	public final void moveLeft() {
-		this.positionX -= SPEED;
+		this.positionX -= speed;
 	}
 
 	/**
@@ -185,16 +188,36 @@ public class Ship extends Entity {
 	 * @return Speed of the ship.
 	 */
 	public final int getSpeed() {
-		return SPEED;
+		return speed;
 	}
 
 	public void setBulletType(BulletType bulletType) {
 		this.currentBulletType = bulletType;
-
 		this.bulletSpeed = bulletType.getSpeed();
-
-		this.shootingCooldown = Core.getCooldown(shipType.getShootingInterval());
 		this.remainingShots =0;
 		this.nextShotTime = 0;
+	}
+
+	public final void setSpeed(final int speed) {
+		if (speed <= 0) {
+			throw new IllegalArgumentException(
+					"Speed must be positive.");
+		}
+
+		this.speed = speed;
+	}
+	public final int getShootingInterval() {
+		return this.shootingInterval;
+	}
+
+	public final void setShootingInterval(final int shootingInterval) {
+
+		if (shootingInterval <= 0) {
+			throw new IllegalArgumentException(
+					"Shooting interval must be positive.");
+		}
+
+		this.shootingCooldown.setDuration(shootingInterval);
+		this.shootingInterval = shootingInterval;
 	}
 }
