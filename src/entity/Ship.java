@@ -9,59 +9,84 @@ import engine.DrawManager.SpriteType;
 
 /**
  * Implements a ship, to be controlled by the player.
- * 
+ *
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
- * 
  */
 public class Ship extends Entity {
 
-	/** Time between shots. */
-	private static final int SHOOTING_INTERVAL = 750;
 	/** Speed of the bullets shot by the ship. */
 	private static final int BULLET_SPEED = -6;
-	/** Movement of the ship for each unit of time. */
-	private static final int SPEED = 2;
-	
+
+	/** Type of ship selected by the player. */
+	private final ShipType shipType;
+
+	/** Movement speed of the ship. */
+	private final int speed;
+
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
+
 	/** Time spent inactive between hits. */
 	private Cooldown destructionCooldown;
 
 	/**
-	 * Constructor, establishes the ship's properties.
-	 * 
+	 * Default constructor.
+	 * Uses the STANDARD ship configuration.
+	 *
 	 * @param positionX
 	 *            Initial position of the ship in the X axis.
 	 * @param positionY
 	 *            Initial position of the ship in the Y axis.
 	 */
 	public Ship(final int positionX, final int positionY) {
+		this(positionX, positionY, ShipType.STANDARD);
+	}
+
+	/**
+	 * Constructor with a selectable ship type.
+	 *
+	 * @param positionX
+	 *            Initial position of the ship in the X axis.
+	 * @param positionY
+	 *            Initial position of the ship in the Y axis.
+	 * @param shipType
+	 *            Selected player ship type.
+	 */
+	public Ship(final int positionX, final int positionY,
+			final ShipType shipType) {
+
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
+		if (shipType == null)
+			throw new IllegalArgumentException(
+					"Ship type cannot be null.");
+
+		this.shipType = shipType;
+		this.speed = shipType.getSpeed();
+
 		this.spriteType = SpriteType.Ship;
-		this.shootingCooldown = Core.getCooldown(SHOOTING_INTERVAL);
+		this.shootingCooldown =
+				Core.getCooldown(shipType.getShootingInterval());
 		this.destructionCooldown = Core.getCooldown(1000);
 	}
 
 	/**
-	 * Moves the ship speed uni ts right, or until the right screen border is
-	 * reached.
+	 * Moves the ship speed units right.
 	 */
 	public final void moveRight() {
-		this.positionX += SPEED;
+		this.positionX += this.speed;
 	}
 
 	/**
-	 * Moves the ship speed units left, or until the left screen border is
-	 * reached.
+	 * Moves the ship speed units left.
 	 */
 	public final void moveLeft() {
-		this.positionX -= SPEED;
+		this.positionX -= this.speed;
 	}
 
 	/**
 	 * Shoots a bullet upwards.
-	 * 
+	 *
 	 * @param bullets
 	 *            List of bullets on screen, to add the new bullet.
 	 * @return Checks if the bullet was shot correctly.
@@ -69,10 +94,15 @@ public class Ship extends Entity {
 	public final boolean shoot(final Set<Bullet> bullets) {
 		if (this.shootingCooldown.checkFinished()) {
 			this.shootingCooldown.reset();
-			bullets.add(BulletPool.getBullet(positionX + this.width / 2,
-					positionY, BULLET_SPEED));
+
+			bullets.add(BulletPool.getBullet(
+					positionX + this.width / 2,
+					positionY,
+					BULLET_SPEED));
+
 			return true;
 		}
+
 		return false;
 	}
 
@@ -95,7 +125,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Checks if the ship is destroyed.
-	 * 
+	 *
 	 * @return True if the ship is currently destroyed.
 	 */
 	public final boolean isDestroyed() {
@@ -104,10 +134,28 @@ public class Ship extends Entity {
 
 	/**
 	 * Getter for the ship's speed.
-	 * 
+	 *
 	 * @return Speed of the ship.
 	 */
 	public final int getSpeed() {
-		return SPEED;
+		return this.speed;
+	}
+
+	/**
+	 * Getter for the selected ship type.
+	 *
+	 * @return Current ship type.
+	 */
+	public final ShipType getShipType() {
+		return this.shipType;
+	}
+
+	/**
+	 * Checks whether this ship type supports a shield.
+	 *
+	 * @return True if the selected ship supports a shield.
+	 */
+	public final boolean isShieldCapable() {
+		return this.shipType.isShieldCapable();
 	}
 }
