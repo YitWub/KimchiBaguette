@@ -132,13 +132,13 @@ public class GameScreen extends Screen {
 		this.level = gameState.getLevel();
 		this.score = gameState.getScore();
 		
-		int initialLives = gameState.getLivesRemaining()
-				+ (this.bonusLife ? 1 : 0);
-
-		initialLives = Math.min(initialLives, this.shipType.getMaxLives());
+		int initialLives = Math.min(gameState.getLivesRemaining(),
+				this.shipType.getMaxLives());
 
 		this.playerStatus = new PlayerStatus(initialLives,
 				this.shipType.getMaxLives());
+		if (this.bonusLife)
+			this.playerStatus.gainLife();
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 	}
