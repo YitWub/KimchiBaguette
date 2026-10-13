@@ -64,9 +64,25 @@ on its own after 3 seconds, and the penalty element has an effect the player can
 observe without reading the log.
 
 ## Dependencies on Other Teams
-* Team 3 (Level Design System): The Level Design team needs integration support to place and spawn the new enemy ship types and mini-bosses within enemy waves and each level's configuration.
-* Team 8 (Gameplay HUD): The Gameplay HUD team needs to be able to display UI tailored to the player's selected ship (e.g., remaining health/shield gauge for tanker-type ships, the selected ship's icon, and special ability gauge display).
-* Team 5 (Visual Effect System): The Visual Effect team needs to support customized visual effects per ship, such as engine thrust effects (booster particles) and mini-boss-specific explosion and hit animations.
+The items below are the support our own requirements depend on, and that we therefore
+request from the teams named.
+
+* **Team 3 (Level Design System)**: We ask the Level Design team to let each level's
+  configuration declare which enemy ship types appear in a wave and which stages spawn
+  a boss, so that enemy types and bosses are placed by level data instead of being
+  hardcoded in the game screen. Without this, R2, R3 and R4 cannot be arranged into a
+  difficulty curve across the levels, and the stages 3, 5 and 7 named in R4 stay fixed
+  in our own code.
+* **Team 8 (Gameplay HUD)**: We ask the Gameplay HUD team for HUD elements that show
+  per-ship state: a remaining health and shield gauge, the icon of the selected ship,
+  and a special ability gauge. Without this, the stat differences in R1 and the shield
+  duration in R5 are not observable on screen, so neither completion condition can be
+  checked in play.
+* **Team 5 (Visual Effect System)**: We ask the Visual Effect team for per-ship and
+  per-boss visual effects: engine thrust particles bound to the selected ship, and
+  boss-specific hit and explosion animations. Without this, the three ships in R1 and
+  the two boss types in R4 are visually indistinguishable, and the phase changes in R4
+  have no visible feedback.
 
 ## Git Workflow
 The team's Git workflow — branch strategy, commit rules, pull request and review
