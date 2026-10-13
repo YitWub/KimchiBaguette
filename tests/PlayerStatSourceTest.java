@@ -4,8 +4,14 @@ import java.util.Set;
 
 import engine.Cooldown;
 import engine.Core;
+import engine.GameSettings;
+import engine.GameState;
 import entity.Bullet;
+import entity.BulletType;
+import entity.PlayerStatus;
 import entity.Ship;
+import entity.ShipType;
+import screen.GameScreen;
 
 /** Small standalone regression checks for the B2 ship-stat changes. */
 public final class PlayerStatSourceTest {
@@ -103,6 +109,72 @@ public final class PlayerStatSourceTest {
 				"Extended duration applies to elapsed cooldown time");
 	}
 
+	private static void checkShipTypesAndLives() throws Exception {
+		ShipType[] types = { ShipType.STANDARD, ShipType.SPEEDSTER,
+				ShipType.TANK };
+		int[] speeds = { 2, 4, 1 };
+		int[] intervals = { 750, 400, 1000 };
+		int[] maxLives = { 3, 2, 5 };
+		for (int i = 0; i < types.length; i++) {
+			Ship ship = new Ship(100, 100, types[i]);
+			check(ship.getShipType() == types[i],
+					"Selected ship type is retained");
+			check(ship.getBaseSpeed() == speeds[i]
+					&& ship.getSpeed() == speeds[i],
+					"Selected type provides baseline movement speed");
+			check(ship.getBaseShootingInterval() == intervals[i]
+					&& ship.getShootingInterval() == intervals[i],
+					"Selected type provides baseline firing interval");
+
+			GameScreen screen = new GameScreen(
+					new GameState(1, 0, 3, 0, 0),
+					new GameSettings(5, 4, 60, 2000), false,
+					800, 600, 60, types[i]);
+			Field statusField = GameScreen.class
+					.getDeclaredField("playerStatus");
+			statusField.setAccessible(true);
+			PlayerStatus status = (PlayerStatus) statusField.get(screen);
+			check(status.getMaxLives() == maxLives[i],
+					"Selected type maximum lives reaches PlayerStatus");
+			check(status.getLives() == Math.min(3, maxLives[i]),
+					"Initial lives are clamped to selected type maximum");
+		}
+	}
+
+	private static void checkBulletPatterns() throws Exception {
+		Set<Bullet> tankBullets = new HashSet<Bullet>();
+		Ship tank = new Ship(100, 100, ShipType.TANK);
+		check(tank.getShipType().getBulletType() == BulletType.MULTI,
+				"Tank selects multi-shot ammunition");
+		int multiCount = tank.shoot(tankBullets);
+		check(multiCount == 3 && tankBullets.size() == 3,
+				"Multi-shot returns and creates three bullets");
+
+		Set<Bullet> rapidBullets = new HashSet<Bullet>();
+		Ship speedster = new Ship(100, 100, ShipType.SPEEDSTER);
+		check(speedster.getShipType().getBulletType() == BulletType.RAPID,
+				"Speedster selects rapid ammunition");
+		int rapidCount = speedster.shoot(rapidBullets);
+		Thread.sleep(BulletType.RAPID.getShotDelay() + 20L);
+		rapidCount += speedster.updateBurst(rapidBullets);
+		check(rapidCount == BulletType.RAPID.getShotCount()
+				&& rapidBullets.size() == BulletType.RAPID.getShotCount(),
+				"Rapid burst returns the total number of bullets added");
+	}
+
+	private static void checkPlayerLifeManagement() {
+		PlayerStatus status = new PlayerStatus(2, 3);
+		check(status.isAlive() && status.getLives() == 2,
+				"B1 starts with the configured lives");
+		check(status.takeDamage(1) && status.getLives() == 1,
+				"B1 damage consumes a life");
+		check(status.takeDamage(2) && status.getLives() == 0
+				&& !status.isAlive(),
+				"B1 damage clamps lives to zero and reports death");
+		check(!status.takeDamage(1) && status.getLives() == 0,
+				"B1 does not apply damage after death");
+	}
+
 	public static void main(final String[] args) throws Exception {
 		Ship ship = new Ship(100, 100);
 		check(ship.getSpeed() == 2, "Default ship speed");
@@ -134,11 +206,12 @@ public final class PlayerStatSourceTest {
 
 		Ship firingShip = new Ship(100, 100);
 		Set<Bullet> bullets = new HashSet<Bullet>();
-		check(firingShip.shoot(bullets), "A new ship can fire immediately");
+		check(firingShip.shoot(bullets) == 1,
+				"A new ship can fire immediately");
 		firingShip.setShootingInterval(60000);
 		check(firingShip.getShootingInterval() == 60000,
 				"Updated shooting interval");
-		check(!firingShip.shoot(bullets),
+		check(firingShip.shoot(bullets) == 0,
 				"Changing interval does not grant an immediate extra shot");
 
 		checkInvalidInterval(firingShip, 0);
@@ -155,6 +228,9 @@ public final class PlayerStatSourceTest {
 		}
 		checkCooldownValidation();
 		checkCooldownDurationChanges();
+		checkShipTypesAndLives();
+		checkBulletPatterns();
+		checkPlayerLifeManagement();
 
 		System.out.println("Player stat source checks passed.");
 	}

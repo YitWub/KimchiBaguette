@@ -15,6 +15,7 @@ import entity.EnemyShipFormation;
 import entity.Entity;
 import entity.PlayerStatus;
 import entity.Ship;
+import entity.ShipType;
 
 /**
  * Implements the game screen, where the action happens.
@@ -47,6 +48,8 @@ public class GameScreen extends Screen {
 	private EnemyShipFormation enemyShipFormation;
 	/** Player's ship. */
 	private Ship ship;
+	/** Type of player ship selected for the current game. */
+	private ShipType shipType;
 	/** Bonus enemy ship that appears sometimes. */
 	private EnemyShip enemyShipSpecial;
 	/** Minimum time between bonus ship appearances. */
@@ -74,12 +77,12 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Constructor, establishes the properties of the screen.
-	 * 
+	 *
 	 * @param gameState
 	 *            Current game state.
 	 * @param gameSettings
 	 *            Current game settings.
-	 * @param bonnusLife
+	 * @param bonusLife
 	 *            Checks if a bonus life is awarded this level.
 	 * @param width
 	 *            Screen width.
@@ -91,17 +94,51 @@ public class GameScreen extends Screen {
 	public GameScreen(final GameState gameState,
 			final GameSettings gameSettings, final boolean bonusLife,
 			final int width, final int height, final int fps) {
+		this(gameState, gameSettings, bonusLife, width, height, fps,
+				ShipType.STANDARD);
+	}
+
+	/**
+	 * Constructor, establishes the properties of the screen using a selected
+	 * player ship type.
+	 *
+	 * @param gameState
+	 *            Current game state.
+	 * @param gameSettings
+	 *            Current game settings.
+	 * @param bonusLife
+	 *            Checks if a bonus life is awarded this level.
+	 * @param width
+	 *            Screen width.
+	 * @param height
+	 *            Screen height.
+	 * @param fps
+	 *            Frames per second, frame rate at which the game is run.
+	 * @param shipType
+	 *            Selected player ship type.
+	 */
+	public GameScreen(final GameState gameState,
+			final GameSettings gameSettings, final boolean bonusLife,
+			final int width, final int height, final int fps,
+			final ShipType shipType) {
 		super(width, height, fps);
+
+		if (shipType == null)
+			throw new IllegalArgumentException("Ship type cannot be null.");
 
 		this.gameSettings = gameSettings;
 		this.bonusLife = bonusLife;
+		this.shipType = shipType;
 		this.level = gameState.getLevel();
 		this.score = gameState.getScore();
 
 		int initialLives = gameState.getLivesRemaining()
 				+ (this.bonusLife ? 1 : 0);
 
-		this.playerStatus = new PlayerStatus(initialLives, Core.getMaxLives());
+		initialLives = Math.min(initialLives, this.shipType.getMaxLives());
+
+		this.playerStatus = new PlayerStatus(initialLives,
+				this.shipType.getMaxLives());
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 	}
@@ -114,7 +151,8 @@ public class GameScreen extends Screen {
 
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
-		this.ship = new Ship(this.width / 2, this.height - 30);
+		this.ship = new Ship(this.width / 2, this.height - 30,
+				this.shipType);
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
@@ -168,8 +206,7 @@ public class GameScreen extends Screen {
 						this.ship.getPositionX(), this.ship.getWidth(),
 						this.width));
 				if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
-					if (this.ship.shoot(this.bullets))
-						this.bulletsShot++;
+					this.bulletsShot += this.ship.shoot(this.bullets);
 			}
 
 			if (this.enemyShipSpecial != null) {
@@ -192,6 +229,11 @@ public class GameScreen extends Screen {
 			}
 
 			this.ship.update();
+
+			if (!this.ship.isDestroyed()) {
+				this.bulletsShot += this.ship.updateBurst(this.bullets);
+			}
+
 			this.enemyShipFormation.update();
 			this.enemyShipFormation.shoot(this.bullets);
 		}
