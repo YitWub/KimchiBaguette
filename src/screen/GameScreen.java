@@ -74,8 +74,6 @@ public class GameScreen extends Screen {
 	private boolean levelFinished;
 	/** Checks if a bonus life is received. */
 	private boolean bonusLife;
-	/** Ship type */
-	private ShipType selectedShipType;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
@@ -133,8 +131,7 @@ public class GameScreen extends Screen {
 		this.shipType = shipType;
 		this.level = gameState.getLevel();
 		this.score = gameState.getScore();
-		this.selectedShipType = shipType;
-
+		
 		int initialLives = gameState.getLivesRemaining()
 				+ (this.bonusLife ? 1 : 0);
 

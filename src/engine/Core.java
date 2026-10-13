@@ -16,9 +16,6 @@ import screen.TitleScreen;
 import screen.ShipSelectionScreen;
 import entity.ShipType;
 
-import entity.ShipType;
-import screen.ShipSelectionScreen;
-
 
 /**
  * Implements core game logic.
