@@ -4,11 +4,15 @@ import java.awt.event.KeyEvent;
 import java.util.HashSet;
 import java.util.Set;
 
+import boss.BossManager;
+import boss.BossSpawnRequest;
+import boss.LoggingBossEventListener;
 import engine.Cooldown;
 import engine.Core;
 import engine.GameSettings;
 import engine.GameState;
 import entity.Boss;
+import entity.BossBullet;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.EnemyShip;
@@ -56,6 +60,10 @@ public class GameScreen extends Screen {
 	private Boss boss;
 	/** Time the defeated boss stays on screen as an explosion. */
 	private Cooldown bossExplosionCooldown;
+	/** Boss attacks, events and links to other systems. */
+	private BossManager bossManager;
+	/** Set of all bullets fired by the boss. */
+	private Set<BossBullet> bossBullets;
 	/** Bonus enemy ship that appears sometimes. */
 	private EnemyShip enemyShipSpecial;
 	/** Minimum time between bonus ship appearances. */
@@ -124,8 +132,14 @@ public class GameScreen extends Screen {
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
 		this.ship = new Ship(this.width / 2, this.height - 30);
+		this.bossBullets = new HashSet<BossBullet>();
+		this.bossManager = new BossManager();
+		// Logs boss events until HUD and Visual Effect listeners are added.
+		this.bossManager.getEventManager().addListener(
+				new LoggingBossEventListener());
 		// TODO: spawn only on boss levels (Level Design System).
-		this.boss = new Boss(this.width / 2, 78, Boss.BossType.BOSS_A);
+		this.boss = this.bossManager.spawn(new BossSpawnRequest(
+				Boss.BossType.BOSS_A, this.width / 2, 78, this.level, 0));
 		this.bossExplosionCooldown = Core.getCooldown(BOSS_EXPLOSION_TIME);
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
@@ -206,6 +220,9 @@ public class GameScreen extends Screen {
 			}
 			if (this.boss != null) {
 				this.boss.update(1, this.width - 1);
+				this.bossManager.update(
+						this.ship.getPositionX() + this.ship.getWidth() / 2,
+						this.ship.getPositionY(), this.bossBullets);
 				// Removes the boss once its explosion has been shown.
 				if (this.boss.isDefeated()
 						&& this.bossExplosionCooldown.checkFinished())
@@ -254,6 +271,9 @@ public class GameScreen extends Screen {
 		for (Bullet bullet : this.bullets)
 			drawManager.drawEntity(bullet, bullet.getPositionX(),
 					bullet.getPositionY());
+		for (BossBullet bossBullet : this.bossBullets)
+			drawManager.drawEntity(bossBullet, bossBullet.getPositionX(),
+					bossBullet.getPositionY());
 
 		// Interface.
 		drawManager.drawScore(this, this.score);
@@ -289,6 +309,15 @@ public class GameScreen extends Screen {
 		}
 		this.bullets.removeAll(recyclable);
 		BulletPool.recycle(recyclable);
+
+		Set<BossBullet> outside = new HashSet<BossBullet>();
+		for (BossBullet bossBullet : this.bossBullets) {
+			bossBullet.update();
+			if (bossBullet.isOutside(SEPARATION_LINE_HEIGHT, this.width,
+					this.height))
+				outside.add(bossBullet);
+		}
+		this.bossBullets.removeAll(outside);
 	}
 
 	/**
@@ -329,6 +358,7 @@ public class GameScreen extends Screen {
 				if (this.boss != null && !this.boss.isDefeated()
 						&& checkCollision(bullet, this.boss)) {
 					this.boss.takeDamage(BOSS_DAMAGE_PER_HIT);
+					this.bossManager.sync();
 					recyclable.add(bullet);
 					this.logger.info("Boss hit: "
 							+ this.boss.getCurrentHealth() + "/"
@@ -342,6 +372,20 @@ public class GameScreen extends Screen {
 			}
 		this.bullets.removeAll(recyclable);
 		BulletPool.recycle(recyclable);
+
+		Set<BossBullet> hitBossBullets = new HashSet<BossBullet>();
+		for (BossBullet bossBullet : this.bossBullets)
+			if (checkCollision(bossBullet, this.ship) && !this.levelFinished) {
+				hitBossBullets.add(bossBullet);
+				if (!this.ship.isDestroyed() && this.playerStatus
+						.takeDamage(bossBullet.getDamage())) {
+					this.ship.destroy();
+					this.logger.info("Hit on player ship by the boss, "
+							+ this.playerStatus.getLives()
+							+ " lives remaining.");
+				}
+			}
+		this.bossBullets.removeAll(hitBossBullets);
 	}
 
 	/**
