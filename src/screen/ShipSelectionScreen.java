@@ -24,9 +24,9 @@ public class ShipSelectionScreen extends Screen {
     /**
      * Constructor, establishes the properties of the screen.
      *
-     * @param width Screen width.
+     * @param width  Screen width.
      * @param height Screen height.
-     * @param fps Frames per second.
+     * @param fps    Frames per second.
      */
     public ShipSelectionScreen(final int width, final int height, final int fps) {
         super(width, height, fps);

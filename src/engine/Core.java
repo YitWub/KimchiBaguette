@@ -13,6 +13,8 @@ import screen.HighScoreScreen;
 import screen.ScoreScreen;
 import screen.Screen;
 import screen.TitleScreen;
+import screen.ShipSelectionScreen;
+import entity.ShipType;
 
 import entity.ShipType;
 import screen.ShipSelectionScreen;
@@ -131,25 +133,33 @@ public final class Core {
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing title screen.");
 				break;
-			case 2:
-				// Ship selection screen
-					ShipSelectionScreen shipSelectionScreen = new ShipSelectionScreen(width, height, FPS);
-					frame.setScreen(shipSelectionScreen);
-					ShipType selectedShip = shipSelectionScreen.getSelectedShip();
 
-					if(selectedShip == null){
-						selectedShip = ShipType.STANDARD;
-					}
+			case 2:
+				// Ship selection screen before the game starts.
+				currentScreen = new ShipSelectionScreen(width, height, FPS);
+				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
+						+ " ship selection screen at " + FPS + " fps.");
+				frame.setScreen(currentScreen);
+				LOGGER.info("Closing ship selection screen.");
+
+				ShipType selectedShip =
+						((ShipSelectionScreen) currentScreen).getSelectedShip();
+
+				gameState = new GameState(1, 0,
+						selectedShip.getMaxLives(), 0, 0);
+
 				// Game & score.
 				do {
 					// One extra live every few levels.
 					boolean bonusLife = gameState.getLevel()
 							% EXTRA_LIFE_FRECUENCY == 0
-							&& gameState.getLivesRemaining() < MAX_LIVES;
+							&& gameState.getLivesRemaining()
+							< selectedShip.getMaxLives();
 					
 					currentScreen = new GameScreen(gameState,
 							gameSettings.get(gameState.getLevel() - 1),
-							bonusLife, width, height, FPS,selectedShip);
+							bonusLife, width, height, FPS, selectedShip);
+
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " game screen at " + FPS + " fps.");
 					frame.setScreen(currentScreen);
@@ -172,10 +182,12 @@ public final class Core {
 						+ gameState.getLivesRemaining() + " lives remaining, "
 						+ gameState.getBulletsShot() + " bullets shot and "
 						+ gameState.getShipsDestroyed() + " ships destroyed.");
+
 				currentScreen = new ScoreScreen(width, height, FPS, gameState);
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
 				break;
+
 			case 3:
 				// High scores.
 				currentScreen = new HighScoreScreen(width, height, FPS);
@@ -184,6 +196,7 @@ public final class Core {
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing high score screen.");
 				break;
+
 			default:
 				break;
 			}

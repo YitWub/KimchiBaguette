@@ -9,9 +9,8 @@ import engine.DrawManager.SpriteType;
 
 /**
  * Implements a ship, to be controlled by the player.
- * 
+ *
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
- * 
  */
 public class Ship extends Entity {
 
@@ -29,27 +28,36 @@ public class Ship extends Entity {
 	/** Movement of the ship for each unit of time. */
 	private int speed;
 	
+	/** Type of ship selected by the player. */
+	private final ShipType shipType;
+
 	/** Minimum time between shots. */
 	private Cooldown shootingCooldown;
+
 	/** Time spent inactive between hits. */
 	private Cooldown destructionCooldown;
 
 	/**
-	 * Constructor, establishes the ship's properties.
-	 * 
+	 * Default constructor.
+	 * Uses the STANDARD ship configuration.
+	 *
 	 * @param positionX
 	 *            Initial position of the ship in the X axis.
 	 * @param positionY
 	 *            Initial position of the ship in the Y axis.
 	 */
-	public Ship(final int posidionX, final int positionY){
-		this(posidionX, positionY, ShipType.STANDARD);
+	public Ship(final int positionX, final int positionY){
+		this(positionX, positionY, ShipType.STANDARD);
 	}
 
 	public Ship(final int positionX, final int positionY, final ShipType shipType) {
 		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
-		this.speed = shipType.getSpeed();
+		if (shipType == null)
+            throw new IllegalArgumentException("Ship type cannot be null.");
+
+        this.shipType = shipType;
+        this.speed = shipType.getSpeed();
 		this.shootingInterval = shipType.getShootingInterval();
 
 		this.currentBulletType = shipType.getBulletType();
@@ -62,24 +70,22 @@ public class Ship extends Entity {
 	}
 
 	/**
-	 * Moves the ship speed uni ts right, or until the right screen border is
-	 * reached.
+	 * Moves the ship speed units right.
 	 */
 	public final void moveRight() {
-		this.positionX += speed;
+		this.positionX += this.speed;
 	}
 
 	/**
-	 * Moves the ship speed units left, or until the left screen border is
-	 * reached.
+	 * Moves the ship speed units left.
 	 */
 	public final void moveLeft() {
-		this.positionX -= speed;
+		this.positionX -= this.speed;
 	}
 
 	/**
 	 * Shoots a bullet upwards.
-	 * 
+	 *
 	 * @param bullets
 	 *            List of bullets on screen, to add the new bullet.
 	 * @return Checks if the bullet was shot correctly.
@@ -172,7 +178,7 @@ public class Ship extends Entity {
 
 	/**
 	 * Checks if the ship is destroyed.
-	 * 
+	 *
 	 * @return True if the ship is currently destroyed.
 	 */
 	public final boolean isDestroyed() {
@@ -181,11 +187,11 @@ public class Ship extends Entity {
 
 	/**
 	 * Getter for the ship's speed.
-	 * 
+	 *
 	 * @return Speed of the ship.
 	 */
 	public final int getSpeed() {
-		return speed;
+		return this.speed;
 	}
 
 	public void setBulletType(BulletType bulletType) {
@@ -216,5 +222,23 @@ public class Ship extends Entity {
 
 		this.shootingCooldown.setDuration(shootingInterval);
 		this.shootingInterval = shootingInterval;
+	}
+
+	/**
+	 * Getter for the selected ship type.
+	 *
+	 * @return Current ship type.
+	 */
+	public final ShipType getShipType() {
+		return this.shipType;
+	}
+
+	/**
+	 * Checks whether this ship type supports a shield.
+	 *
+	 * @return True if the selected ship supports a shield.
+	 */
+	public final boolean isShieldCapable() {
+		return this.shipType.isShieldCapable();
 	}
 }
