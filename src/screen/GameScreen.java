@@ -19,8 +19,9 @@ import entity.ShipType;
 
 /**
  * Implements the game screen, where the action happens.
- *
+ * 
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
+ * 
  */
 public class GameScreen extends Screen {
 
@@ -75,36 +76,55 @@ public class GameScreen extends Screen {
 	private boolean bonusLife;
 
 	/**
-	 * Default constructor.
-	 * Uses the STANDARD player ship.
+	 * Constructor, establishes the properties of the screen.
+	 * 
+	 * @param gameState
+	 *            Current game state.
+	 * @param gameSettings
+	 *            Current game settings.
+	 * @param bonusLife
+	 *            Checks if a bonus life is awarded this level.
+	 * @param width
+	 *            Screen width.
+	 * @param height
+	 *            Screen height.
+	 * @param fps
+	 *            Frames per second, frame rate at which the game is run.
 	 */
 	public GameScreen(final GameState gameState,
-			final GameSettings gameSettings,
-			final boolean bonusLife,
-			final int width,
-			final int height,
-			final int fps) {
-
-		this(gameState, gameSettings, bonusLife,
-				width, height, fps, ShipType.STANDARD);
+			final GameSettings gameSettings, final boolean bonusLife,
+			final int width, final int height, final int fps) {
+		this(gameState, gameSettings, bonusLife, width, height, fps,
+				ShipType.STANDARD);
 	}
 
 	/**
-	 * Constructor with selectable player ship type.
+	 * Constructor, establishes the properties of the screen using a selected
+	 * player ship type.
+	 * 
+	 * @param gameState
+	 *            Current game state.
+	 * @param gameSettings
+	 *            Current game settings.
+	 * @param bonusLife
+	 *            Checks if a bonus life is awarded this level.
+	 * @param width
+	 *            Screen width.
+	 * @param height
+	 *            Screen height.
+	 * @param fps
+	 *            Frames per second, frame rate at which the game is run.
+	 * @param shipType
+	 *            Selected player ship type.
 	 */
 	public GameScreen(final GameState gameState,
-			final GameSettings gameSettings,
-			final boolean bonusLife,
-			final int width,
-			final int height,
-			final int fps,
+			final GameSettings gameSettings, final boolean bonusLife,
+			final int width, final int height, final int fps,
 			final ShipType shipType) {
-
 		super(width, height, fps);
 
 		if (shipType == null)
-			throw new IllegalArgumentException(
-					"Ship type cannot be null.");
+			throw new IllegalArgumentException("Ship type cannot be null.");
 
 		this.gameSettings = gameSettings;
 		this.bonusLife = bonusLife;
@@ -115,14 +135,10 @@ public class GameScreen extends Screen {
 		int initialLives = gameState.getLivesRemaining()
 				+ (this.bonusLife ? 1 : 0);
 
-		initialLives = Math.min(
-				initialLives,
-				this.shipType.getMaxLives());
+		initialLives = Math.min(initialLives, this.shipType.getMaxLives());
 
-		this.playerStatus = new PlayerStatus(
-				initialLives,
+		this.playerStatus = new PlayerStatus(initialLives,
 				this.shipType.getMaxLives());
-
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 	}
@@ -135,24 +151,18 @@ public class GameScreen extends Screen {
 
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
-
-		this.ship = new Ship(
-				this.width / 2,
-				this.height - 30,
+		this.ship = new Ship(this.width / 2, this.height - 30,
 				this.shipType);
-
+		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
 		this.enemyShipSpecialCooldown.reset();
-
-		this.enemyShipSpecialExplosionCooldown =
-				Core.getCooldown(BONUS_SHIP_EXPLOSION);
-
-		this.screenFinishedCooldown =
-				Core.getCooldown(SCREEN_CHANGE_INTERVAL);
-
+		this.enemyShipSpecialExplosionCooldown = Core
+				.getCooldown(BONUS_SHIP_EXPLOSION);
+		this.screenFinishedCooldown = Core.getCooldown(SCREEN_CHANGE_INTERVAL);
 		this.bullets = new HashSet<Bullet>();
 
+		// Special input delay / countdown.
 		this.gameStartTime = System.currentTimeMillis();
 		this.inputDelay = Core.getCooldown(INPUT_DELAY);
 		this.inputDelay.reset();
@@ -160,18 +170,14 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Starts the action.
-	 *
+	 * 
 	 * @return Next screen code.
 	 */
 	public final int run() {
 		super.run();
 
-		this.score += LIFE_SCORE
-				* (this.playerStatus.getLives() - 1);
-
-		this.logger.info(
-				"Screen cleared with a score of "
-						+ this.score);
+		this.score += LIFE_SCORE * (this.playerStatus.getLives() - 1);
+		this.logger.info("Screen cleared with a score of " + this.score);
 
 		return this.returnCode;
 	}
@@ -182,71 +188,47 @@ public class GameScreen extends Screen {
 	protected final void update() {
 		super.update();
 
-		if (this.inputDelay.checkFinished()
-				&& !this.levelFinished) {
+		if (this.inputDelay.checkFinished() && !this.levelFinished) {
 
 			if (!this.ship.isDestroyed()) {
-
-				boolean moveRight =
-						inputManager.isKeyDown(KeyEvent.VK_RIGHT)
+				boolean moveRight = inputManager.isKeyDown(KeyEvent.VK_RIGHT)
 						|| inputManager.isKeyDown(KeyEvent.VK_D);
-
-				boolean moveLeft =
-						inputManager.isKeyDown(KeyEvent.VK_LEFT)
+				boolean moveLeft = inputManager.isKeyDown(KeyEvent.VK_LEFT)
 						|| inputManager.isKeyDown(KeyEvent.VK_A);
 
-				boolean isRightBorder =
-						this.ship.getPositionX()
-						+ this.ship.getWidth()
-						+ this.ship.getSpeed()
-						> this.width - 1;
-
-				boolean isLeftBorder =
-						this.ship.getPositionX()
+				boolean isRightBorder = this.ship.getPositionX()
+						+ this.ship.getWidth() + this.ship.getSpeed() > this.width - 1;
+				boolean isLeftBorder = this.ship.getPositionX()
 						- this.ship.getSpeed() < 1;
 
 				if (moveRight && !isRightBorder) {
 					this.ship.moveRight();
 				}
-
 				if (moveLeft && !isLeftBorder) {
 					this.ship.moveLeft();
 				}
-
 				if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
 					if (this.ship.shoot(this.bullets))
 						this.bulletsShot++;
 			}
 
 			if (this.enemyShipSpecial != null) {
-
 				if (!this.enemyShipSpecial.isDestroyed())
 					this.enemyShipSpecial.move(2, 0);
-
-				else if (this.enemyShipSpecialExplosionCooldown
-						.checkFinished())
+				else if (this.enemyShipSpecialExplosionCooldown.checkFinished())
 					this.enemyShipSpecial = null;
-			}
 
+			}
 			if (this.enemyShipSpecial == null
 					&& this.enemyShipSpecialCooldown.checkFinished()) {
-
 				this.enemyShipSpecial = new EnemyShip();
-
 				this.enemyShipSpecialCooldown.reset();
-
-				this.logger.info(
-						"A special ship appears");
+				this.logger.info("A special ship appears");
 			}
-
 			if (this.enemyShipSpecial != null
-					&& this.enemyShipSpecial.getPositionX()
-					> this.width) {
-
+					&& this.enemyShipSpecial.getPositionX() > this.width) {
 				this.enemyShipSpecial = null;
-
-				this.logger.info(
-						"The special ship has escaped");
+				this.logger.info("The special ship has escaped");
 			}
 
 			this.ship.update();
@@ -259,81 +241,51 @@ public class GameScreen extends Screen {
 		draw();
 
 		if ((this.enemyShipFormation.isEmpty()
-				|| !this.playerStatus.isAlive())
-				&& !this.levelFinished) {
-
+				|| !this.playerStatus.isAlive()) && !this.levelFinished) {
 			this.levelFinished = true;
 			this.screenFinishedCooldown.reset();
 		}
 
-		if (this.levelFinished
-				&& this.screenFinishedCooldown.checkFinished())
-
+		if (this.levelFinished && this.screenFinishedCooldown.checkFinished())
 			this.isRunning = false;
+
 	}
 
 	/**
 	 * Draws the elements associated with the screen.
 	 */
 	private void draw() {
-
 		drawManager.initDrawing(this);
 
-		drawManager.drawEntity(
-				this.ship,
-				this.ship.getPositionX(),
+		drawManager.drawEntity(this.ship, this.ship.getPositionX(),
 				this.ship.getPositionY());
-
 		if (this.enemyShipSpecial != null)
-
-			drawManager.drawEntity(
-					this.enemyShipSpecial,
+			drawManager.drawEntity(this.enemyShipSpecial,
 					this.enemyShipSpecial.getPositionX(),
 					this.enemyShipSpecial.getPositionY());
 
 		enemyShipFormation.draw();
 
 		for (Bullet bullet : this.bullets)
-
-			drawManager.drawEntity(
-					bullet,
-					bullet.getPositionX(),
+			drawManager.drawEntity(bullet, bullet.getPositionX(),
 					bullet.getPositionY());
 
-		drawManager.drawScore(
-				this,
-				this.score);
+		// Interface.
+		drawManager.drawScore(this, this.score);
+		drawManager.drawLives(this, this.playerStatus.getLives());
+		drawManager.drawHorizontalLine(this, SEPARATION_LINE_HEIGHT - 1);
 
-		drawManager.drawLives(
-				this,
-				this.playerStatus.getLives());
-
-		drawManager.drawHorizontalLine(
-				this,
-				SEPARATION_LINE_HEIGHT - 1);
-
+		// Countdown to game start.
 		if (!this.inputDelay.checkFinished()) {
-
-			int countdown =
-					(int) ((INPUT_DELAY
+			int countdown = (int) ((INPUT_DELAY
 					- (System.currentTimeMillis()
-					- this.gameStartTime)) / 1000);
-
-			drawManager.drawCountDown(
-					this,
-					this.level,
-					countdown,
+							- this.gameStartTime)) / 1000);
+			drawManager.drawCountDown(this, this.level, countdown,
 					this.bonusLife);
-
-			drawManager.drawHorizontalLine(
-					this,
-					this.height / 2
-					- this.height / 12);
-
-			drawManager.drawHorizontalLine(
-					this,
-					this.height / 2
-					+ this.height / 12);
+			drawManager.drawHorizontalLine(this, this.height / 2 - this.height
+					/ 12);
+			drawManager.drawHorizontalLine(this, this.height / 2 + this.height
+					/ 12);
 		}
 
 		drawManager.completeDrawing(this);
@@ -343,24 +295,14 @@ public class GameScreen extends Screen {
 	 * Cleans bullets that go off screen.
 	 */
 	private void cleanBullets() {
-
-		Set<Bullet> recyclable =
-				new HashSet<Bullet>();
-
+		Set<Bullet> recyclable = new HashSet<Bullet>();
 		for (Bullet bullet : this.bullets) {
-
 			bullet.update();
-
-			if (bullet.getPositionY()
-					< SEPARATION_LINE_HEIGHT
-					|| bullet.getPositionY()
-					> this.height)
-
+			if (bullet.getPositionY() < SEPARATION_LINE_HEIGHT
+					|| bullet.getPositionY() > this.height)
 				recyclable.add(bullet);
 		}
-
 		this.bullets.removeAll(recyclable);
-
 		BulletPool.recycle(recyclable);
 	}
 
@@ -368,140 +310,74 @@ public class GameScreen extends Screen {
 	 * Manages collisions between bullets and ships.
 	 */
 	private void manageCollisions() {
-
-		Set<Bullet> recyclable =
-				new HashSet<Bullet>();
-
+		Set<Bullet> recyclable = new HashSet<Bullet>();
 		for (Bullet bullet : this.bullets)
-
 			if (bullet.getSpeed() > 0) {
-
-				if (checkCollision(
-						bullet,
-						this.ship)
-						&& !this.levelFinished) {
-
+				if (checkCollision(bullet, this.ship) && !this.levelFinished) {
 					recyclable.add(bullet);
-
 					if (!this.ship.isDestroyed()
-							&& this.playerStatus
-							.takeDamage(1)) {
-
+							&& this.playerStatus.takeDamage(1)) {
 						this.ship.destroy();
-
-						this.logger.info(
-								"Hit on player ship, "
-								+ this.playerStatus
-								.getLives()
+						this.logger.info("Hit on player ship, "
+								+ this.playerStatus.getLives()
 								+ " lives remaining.");
 					}
 				}
-
 			} else {
-
-				for (EnemyShip enemyShip
-						: this.enemyShipFormation)
-
+				for (EnemyShip enemyShip : this.enemyShipFormation)
 					if (!enemyShip.isDestroyed()
-							&& checkCollision(
-							bullet,
-							enemyShip)) {
-
-						this.score +=
-								enemyShip.getPointValue();
-
+							&& checkCollision(bullet, enemyShip)) {
+						this.score += enemyShip.getPointValue();
 						this.shipsDestroyed++;
-
-						this.enemyShipFormation
-								.destroy(enemyShip);
-
+						this.enemyShipFormation.destroy(enemyShip);
 						recyclable.add(bullet);
 					}
-
 				if (this.enemyShipSpecial != null
-						&& !this.enemyShipSpecial
-						.isDestroyed()
-						&& checkCollision(
-						bullet,
-						this.enemyShipSpecial)) {
-
-					this.score +=
-							this.enemyShipSpecial
-							.getPointValue();
-
+						&& !this.enemyShipSpecial.isDestroyed()
+						&& checkCollision(bullet, this.enemyShipSpecial)) {
+					this.score += this.enemyShipSpecial.getPointValue();
 					this.shipsDestroyed++;
-
 					this.enemyShipSpecial.destroy();
-
-					this.enemyShipSpecialExplosionCooldown
-							.reset();
-
+					this.enemyShipSpecialExplosionCooldown.reset();
 					recyclable.add(bullet);
 				}
 			}
-
 		this.bullets.removeAll(recyclable);
-
 		BulletPool.recycle(recyclable);
 	}
 
 	/**
 	 * Checks if two entities are colliding.
-	 *
-	 * @param a First entity.
-	 * @param b Second entity.
+	 * 
+	 * @param a
+	 *            First entity, the bullet.
+	 * @param b
+	 *            Second entity, the ship.
 	 * @return Result of the collision test.
 	 */
-	private boolean checkCollision(
-			final Entity a,
-			final Entity b) {
+	private boolean checkCollision(final Entity a, final Entity b) {
+		// Calculate center point of the entities in both axis.
+		int centerAX = a.getPositionX() + a.getWidth() / 2;
+		int centerAY = a.getPositionY() + a.getHeight() / 2;
+		int centerBX = b.getPositionX() + b.getWidth() / 2;
+		int centerBY = b.getPositionY() + b.getHeight() / 2;
+		// Calculate maximum distance without collision.
+		int maxDistanceX = a.getWidth() / 2 + b.getWidth() / 2;
+		int maxDistanceY = a.getHeight() / 2 + b.getHeight() / 2;
+		// Calculates distance.
+		int distanceX = Math.abs(centerAX - centerBX);
+		int distanceY = Math.abs(centerAY - centerBY);
 
-		int centerAX =
-				a.getPositionX()
-				+ a.getWidth() / 2;
-
-		int centerAY =
-				a.getPositionY()
-				+ a.getHeight() / 2;
-
-		int centerBX =
-				b.getPositionX()
-				+ b.getWidth() / 2;
-
-		int centerBY =
-				b.getPositionY()
-				+ b.getHeight() / 2;
-
-		int maxDistanceX =
-				a.getWidth() / 2
-				+ b.getWidth() / 2;
-
-		int maxDistanceY =
-				a.getHeight() / 2
-				+ b.getHeight() / 2;
-
-		int distanceX =
-				Math.abs(centerAX - centerBX);
-
-		int distanceY =
-				Math.abs(centerAY - centerBY);
-
-		return distanceX < maxDistanceX
-				&& distanceY < maxDistanceY;
+		return distanceX < maxDistanceX && distanceY < maxDistanceY;
 	}
 
 	/**
 	 * Returns a GameState object representing the status of the game.
-	 *
+	 * 
 	 * @return Current game state.
 	 */
 	public final GameState getGameState() {
-
-		return new GameState(
-				this.level,
-				this.score,
-				this.playerStatus.getLives(),
-				this.bulletsShot,
-				this.shipsDestroyed);
+		return new GameState(this.level, this.score, this.playerStatus.getLives(),
+				this.bulletsShot, this.shipsDestroyed);
 	}
 }
