@@ -25,6 +25,9 @@ public class Cooldown {
 	 *            Time until cooldown period is finished.
 	 */
 	protected Cooldown(final int milliseconds) {
+		if (milliseconds <= 0)
+			throw new IllegalArgumentException(
+					"Cooldown duration must be positive.");
 		this.milliseconds = milliseconds;
 		this.variance = 0;
 		this.duration = milliseconds;
@@ -41,8 +44,15 @@ public class Cooldown {
 	 *            Variance in the cooldown period.
 	 */
 	protected Cooldown(final int milliseconds, final int variance) {
+		if (milliseconds <= 0)
+			throw new IllegalArgumentException(
+					"Cooldown duration must be positive.");
+		if (variance < 0 || variance >= milliseconds)
+			throw new IllegalArgumentException(
+					"Cooldown variance must be non-negative and less than its duration.");
 		this.milliseconds = milliseconds;
 		this.variance = variance;
+		this.duration = milliseconds;
 		this.time = 0;
 	}
 
@@ -59,7 +69,10 @@ public class Cooldown {
 	}
 
 	/**
-	 * Changes a fixed cooldown's duration without restarting its timer.
+	 * Changes a fixed cooldown's duration without restarting its timer. The new
+	 * duration applies from the original start time, so shortening can make an
+	 * active cooldown finish immediately and extending can keep it active longer.
+	 * The change is not measured from the time this method is called.
 	 *
 	 * @param milliseconds
 	 *            New positive cooldown duration in milliseconds.
