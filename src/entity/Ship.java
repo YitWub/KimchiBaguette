@@ -15,11 +15,15 @@ import engine.DrawManager.SpriteType;
  */
 public class Ship extends Entity {
 
-	/** Time between shots in milliseconds. */
+	/** Baseline time between shots in milliseconds. */
+	private int baseShootingInterval = 750;
+	/** Current time between shots in milliseconds. */
 	private int shootingInterval = 750;
 	/** Speed of the bullets shot by the ship. */
 	private static final int BULLET_SPEED = -6;
-	/** Movement speed of the ship. */
+	/** Baseline movement speed of the ship. */
+	private int baseSpeed = 2;
+	/** Current movement speed of the ship. */
 	private int speed = 2;
 	
 	/** Minimum time between shots. */
@@ -116,15 +120,40 @@ public class Ship extends Entity {
 		return this.shootingInterval;
 	}
 
+	/** @return Baseline movement speed. */
+	public final int getBaseSpeed() {
+		return this.baseSpeed;
+	}
+
+	/** @return Baseline time between shots in milliseconds. */
+	public final int getBaseShootingInterval() {
+		return this.baseShootingInterval;
+	}
+
 	/**
-	 * Changes the ship's movement speed.
+	 * Changes the ship's current movement speed. Zero stops movement.
+	 *
+	 * @param speed
+	 *            Non-negative movement distance per update.
+	 */
+	public final void setSpeed(final int speed) {
+		if (speed < 0)
+			throw new IllegalArgumentException(
+					"Ship speed must be non-negative.");
+		this.speed = speed;
+	}
+
+	/**
+	 * Sets the baseline movement speed and makes it the current speed.
 	 *
 	 * @param speed
 	 *            Positive movement distance per update.
 	 */
-	public final void setSpeed(final int speed) {
+	public final void setBaseSpeed(final int speed) {
 		if (speed <= 0)
-			throw new IllegalArgumentException("Speed must be positive.");
+			throw new IllegalArgumentException(
+					"Base ship speed must be positive.");
+		this.baseSpeed = speed;
 		this.speed = speed;
 	}
 
@@ -135,7 +164,30 @@ public class Ship extends Entity {
 	 *            Positive interval in milliseconds.
 	 */
 	public final void setShootingInterval(final int shootingInterval) {
+		if (shootingInterval <= 0)
+			throw new IllegalArgumentException(
+					"Shooting interval must be positive (milliseconds).");
 		this.shootingCooldown.setDuration(shootingInterval);
 		this.shootingInterval = shootingInterval;
+	}
+
+	/**
+	 * Sets the baseline shooting interval and makes it the current interval.
+	 *
+	 * @param shootingInterval
+	 *            Positive interval in milliseconds.
+	 */
+	public final void setBaseShootingInterval(final int shootingInterval) {
+		if (shootingInterval <= 0)
+			throw new IllegalArgumentException(
+					"Base shooting interval must be positive (milliseconds).");
+		setShootingInterval(shootingInterval);
+		this.baseShootingInterval = shootingInterval;
+	}
+
+	/** Restores the current speed and shooting interval to their baseline values. */
+	public final void restoreBaseStats() {
+		this.speed = this.baseSpeed;
+		setShootingInterval(this.baseShootingInterval);
 	}
 }
