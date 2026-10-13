@@ -6,6 +6,7 @@ import java.util.Set;
 
 import boss.BossManager;
 import boss.BossSpawnRequest;
+import boss.BossStatus;
 import boss.LoggingBossEventListener;
 import engine.Cooldown;
 import engine.Core;
@@ -15,6 +16,7 @@ import entity.Boss;
 import entity.BossBullet;
 import entity.Bullet;
 import entity.BulletPool;
+import entity.BulletType;
 import entity.EnemyShip;
 import entity.EnemyShipFormation;
 import entity.Entity;
@@ -24,9 +26,9 @@ import entity.ShipType;
 
 /**
  * Implements the game screen, where the action happens.
- *
+ * 
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
- *
+ * 
  */
 public class GameScreen extends Screen {
 
@@ -44,8 +46,9 @@ public class GameScreen extends Screen {
 	private static final int SCREEN_CHANGE_INTERVAL = 1500;
 	/** Height of the interface separation line. */
 	private static final int SEPARATION_LINE_HEIGHT = 40;
-	/** Damage dealt to the boss by one player bullet. */
-	private static final int BOSS_DAMAGE_PER_HIT = 50;
+	/** Damage dealt to the boss by one player shot (to confirm with the
+	 * weapon developer). */
+	private static final int BOSS_DAMAGE_PER_SHOT = 50;
 	/** Time the boss explosion stays on screen. */
 	private static final int BOSS_EXPLOSION_TIME = 500;
 	/** Stages where a boss appears (agreed with the team, may change). */
@@ -59,11 +62,10 @@ public class GameScreen extends Screen {
 	private EnemyShipFormation enemyShipFormation;
 	/** Player's ship. */
 	private Ship ship;
-	/** Boss of the level. */
-	private Boss boss;
 	/** Time the defeated boss stays on screen as an explosion. */
 	private Cooldown bossExplosionCooldown;
-	/** Boss attacks, events and links to other systems. */
+	/** Boss of the level, its attacks, events and links to other systems.
+	 * The only source of truth for the boss. */
 	private BossManager bossManager;
 	/** Set of all bullets fired by the boss. */
 	private Set<BossBullet> bossBullets;
@@ -96,7 +98,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Constructor, establishes the properties of the screen.
-	 *
+	 * 
 	 * @param gameState
 	 *            Current game state.
 	 * @param gameSettings
@@ -111,8 +113,8 @@ public class GameScreen extends Screen {
 	 *            Frames per second, frame rate at which the game is run.
 	 */
 	public GameScreen(final GameState gameState,
-					  final GameSettings gameSettings, final boolean bonusLife,
-					  final int width, final int height, final int fps) {
+			final GameSettings gameSettings, final boolean bonusLife,
+			final int width, final int height, final int fps) {
 		this(gameState, gameSettings, bonusLife, width, height, fps,
 				ShipType.STANDARD);
 	}
@@ -120,7 +122,7 @@ public class GameScreen extends Screen {
 	/**
 	 * Constructor, establishes the properties of the screen using a selected
 	 * player ship type.
-	 *
+	 * 
 	 * @param gameState
 	 *            Current game state.
 	 * @param gameSettings
@@ -137,9 +139,9 @@ public class GameScreen extends Screen {
 	 *            Selected player ship type.
 	 */
 	public GameScreen(final GameState gameState,
-					  final GameSettings gameSettings, final boolean bonusLife,
-					  final int width, final int height, final int fps,
-					  final ShipType shipType) {
+			final GameSettings gameSettings, final boolean bonusLife,
+			final int width, final int height, final int fps,
+			final ShipType shipType) {
 		super(width, height, fps);
 
 		if (shipType == null)
@@ -150,7 +152,7 @@ public class GameScreen extends Screen {
 		this.shipType = shipType;
 		this.level = gameState.getLevel();
 		this.score = gameState.getScore();
-
+		
 		int initialLives = gameState.getLivesRemaining()
 				+ (this.bonusLife ? 1 : 0);
 
@@ -179,7 +181,7 @@ public class GameScreen extends Screen {
 				new LoggingBossEventListener());
 		// The boss appears only on boss stages.
 		if (isBossLevel(this.level))
-			this.boss = this.bossManager.spawn(new BossSpawnRequest(
+			this.bossManager.spawn(new BossSpawnRequest(
 					Boss.BossType.BOSS_A, this.width / 2 - Boss.WIDTH / 2, 78,
 					this.level, 0));
 		this.bossExplosionCooldown = Core.getCooldown(BOSS_EXPLOSION_TIME);
@@ -200,7 +202,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Starts the action.
-	 *
+	 * 
 	 * @return Next screen code.
 	 */
 	public final int run() {
@@ -238,7 +240,7 @@ public class GameScreen extends Screen {
 					this.ship.moveLeft();
 				}
 				if (inputManager.isKeyDown(KeyEvent.VK_SPACE)){
-					this.bulletsShot += this.ship.shoot(this.bullets);
+					    this.bulletsShot += this.ship.shoot(this.bullets);
 				}
 			}
 
@@ -260,26 +262,24 @@ public class GameScreen extends Screen {
 				this.enemyShipSpecial = null;
 				this.logger.info("The special ship has escaped");
 			}
-			if (this.boss != null) {
-				this.boss.update(1, this.width - 1);
+			Boss boss = getBossOnScreen();
+			if (boss != null) {
+				boss.update(1, this.width - 1);
 				this.bossManager.update(
 						this.ship.getPositionX() + this.ship.getWidth() / 2,
 						this.ship.getPositionY(), this.bossBullets);
-				// Removes the boss once its explosion has been shown.
-				if (this.boss.isDefeated()
-						&& this.bossExplosionCooldown.checkFinished())
-					this.boss = null;
 			}
 
 			this.ship.update();
 
 			if (!this.ship.isDestroyed()) {
-				this.bulletsShot += this.ship.updateBurst(this.bullets);
+    			this.bulletsShot += this.ship.updateBurst(this.bullets);
 			}
 
 			// Once every ship and explosion is gone, the formation stops
 			// updating, so it keeps valid position and size values.
-			if (this.enemyShipFormation.iterator().hasNext())
+			if (!this.enemyShipFormation.isEmpty()
+					|| this.enemyShipFormation.iterator().hasNext())
 				this.enemyShipFormation.update();
 			// An empty formation has no shooters left, so it must not shoot.
 			if (!this.enemyShipFormation.isEmpty())
@@ -291,9 +291,13 @@ public class GameScreen extends Screen {
 		draw();
 
 		// The level is cleared only when the enemies and the boss are gone.
-		// The boss becomes null after its defeat explosion has been shown.
+		// The boss battle state comes from the BossManager, and the boss
+		// leaves the screen after its defeat explosion has been shown.
+		boolean bossCleared = this.bossManager.getStatus()
+				.getBattleState() != BossStatus.BattleState.IN_BATTLE
+				&& getBossOnScreen() == null;
 		boolean levelCleared = this.enemyShipFormation.isEmpty()
-				&& this.boss == null;
+				&& bossCleared;
 		if ((levelCleared || !this.playerStatus.isAlive())
 				&& !this.levelFinished) {
 			this.levelFinished = true;
@@ -318,9 +322,10 @@ public class GameScreen extends Screen {
 					this.enemyShipSpecial.getPositionX(),
 					this.enemyShipSpecial.getPositionY());
 
-		if (this.boss != null)
-			drawManager.drawEntity(this.boss, this.boss.getPositionX(),
-					this.boss.getPositionY());
+		Boss boss = getBossOnScreen();
+		if (boss != null)
+			drawManager.drawEntity(boss, boss.getPositionX(),
+					boss.getPositionY());
 
 		enemyShipFormation.draw();
 
@@ -340,7 +345,7 @@ public class GameScreen extends Screen {
 		if (!this.inputDelay.checkFinished()) {
 			int countdown = (int) ((INPUT_DELAY
 					- (System.currentTimeMillis()
-					- this.gameStartTime)) / 1000);
+							- this.gameStartTime)) / 1000);
 			drawManager.drawCountDown(this, this.level, countdown,
 					this.bonusLife);
 			drawManager.drawHorizontalLine(this, this.height / 2 - this.height
@@ -412,20 +417,12 @@ public class GameScreen extends Screen {
 					recyclable.add(bullet);
 				}
 				// A bullet that already hit a ship cannot also hit the boss.
-				if (this.boss != null && !this.boss.isDefeated()
+				Boss boss = getBossOnScreen();
+				if (boss != null && !boss.isDefeated()
 						&& !recyclable.contains(bullet)
-						&& checkCollision(bullet, this.boss)) {
-					this.boss.takeDamage(BOSS_DAMAGE_PER_HIT);
-					this.bossManager.sync();
+						&& checkCollision(bullet, boss)) {
+					damageBoss(getBossDamagePerBullet());
 					recyclable.add(bullet);
-					this.logger.info("Boss hit: "
-							+ this.boss.getCurrentHealth() + "/"
-							+ this.boss.getMaxHealth() + ", phase "
-							+ this.boss.getPhase());
-					if (this.boss.isDefeated()) {
-						this.bossExplosionCooldown.reset();
-						this.logger.info("Boss defeated");
-					}
 				}
 			}
 		this.bullets.removeAll(recyclable);
@@ -448,7 +445,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Checks if two entities are colliding.
-	 *
+	 * 
 	 * @param a
 	 *            First entity, the bullet.
 	 * @param b
@@ -472,6 +469,54 @@ public class GameScreen extends Screen {
 	}
 
 	/**
+	 * Applies damage to the boss. Every attack that hurts the boss must go
+	 * through this method, so that the boss events are sent and the defeat
+	 * explosion starts.
+	 *
+	 * @param damage
+	 *            Amount of health to remove.
+	 */
+	private void damageBoss(final int damage) {
+		Boss boss = this.bossManager.getBoss();
+		if (boss == null || boss.isDefeated())
+			return;
+		boss.takeDamage(damage);
+		this.bossManager.sync();
+		if (boss.isDefeated())
+			this.bossExplosionCooldown.reset();
+	}
+
+	/**
+	 * Returns the damage one player bullet deals to the boss. A RAPID shot
+	 * fires its bullets one after another on the same line, so they share
+	 * the damage of one shot. MULTI bullets spread apart and at most one of
+	 * them can reach the boss, so each keeps the full damage.
+	 *
+	 * @return Damage per bullet.
+	 */
+	private int getBossDamagePerBullet() {
+		if (this.shipType.getBulletType() == BulletType.RAPID)
+			return BOSS_DAMAGE_PER_SHOT
+					/ BulletType.RAPID.getShotCount();
+		return BOSS_DAMAGE_PER_SHOT;
+	}
+
+	/**
+	 * Returns the boss to update and draw. A defeated boss stays on screen
+	 * until its explosion has been shown.
+	 *
+	 * @return Boss on screen, or null.
+	 */
+	private Boss getBossOnScreen() {
+		Boss boss = this.bossManager.getBoss();
+		if (boss == null)
+			return null;
+		if (boss.isDefeated() && this.bossExplosionCooldown.checkFinished())
+			return null;
+		return boss;
+	}
+
+	/**
 	 * Checks if a boss appears in the given stage.
 	 *
 	 * @param level
@@ -487,7 +532,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Returns a GameState object representing the status of the game.
-	 *
+	 * 
 	 * @return Current game state.
 	 */
 	public final GameState getGameState() {

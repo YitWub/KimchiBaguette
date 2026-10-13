@@ -75,6 +75,8 @@ public final class BossAttackSystem {
     }
 
     /** Attack data of the boss. */
+    /** Time from the start of a special phase to the first special attack. */
+    private static final int SPECIAL_FIRST_USE_DELAY = 2000;
     private final BossAttackConfig config;
     /** Random generator used to pick patterns. */
     private final Random random;
@@ -171,6 +173,9 @@ public final class BossAttackSystem {
         if (this.buffCooldown != null && this.buffCooldown.checkFinished()) {
             this.buffCooldown = null;
             this.buffMultiplier = 1.0;
+            // The running wait was shortened by the buff, so start it again
+            // with the normal interval.
+            restartAttackCooldown();
         }
 
         // 1. A special attack is being prepared: nothing else happens.
@@ -225,12 +230,15 @@ public final class BossAttackSystem {
         return Math.max(MIN_INTERVAL, (int) Math.round(interval));
     }
 
-    /** Restarts the special cooldown if the current phase allows it. */
+    /**
+     * Starts the first-use delay of the special attack if the current phase
+     * allows it. The full cooldown applies between later uses.
+     */
     private void restartSpecialCooldownIfEnabled() {
         SpecialAttack special = this.config.getSpecialAttack();
         if (special != null
                 && this.config.getPhase(this.phase).isSpecialEnabled())
-            special.restartCooldown();
+            special.startFirstUseDelay(SPECIAL_FIRST_USE_DELAY);
     }
 
     /** Starts waiting for the next attack with the current interval. */
