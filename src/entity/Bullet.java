@@ -17,6 +17,7 @@ public class Bullet extends Entity {
 	 * positive is down.
 	 */
 	private int speed;
+	private int speedX;
 
 	/**
 	 * Constructor, establishes the bullet's properties.
@@ -51,6 +52,7 @@ public class Bullet extends Entity {
 	 */
 	public final void update() {
 		this.positionY += this.speed;
+		this.positionX += this.speedX;
 	}
 
 	/**
@@ -61,6 +63,9 @@ public class Bullet extends Entity {
 	 */
 	public final void setSpeed(final int speed) {
 		this.speed = speed;
+	}
+	public final void setSpeedX(final int speedX) {
+		this.speedX = speedX;
 	}
 
 	/**

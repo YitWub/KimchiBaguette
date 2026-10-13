@@ -58,7 +58,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
 	/** List of enemy ships forming the formation. */
 	private List<List<EnemyShip>> enemyShips;
-	/** Minimum time between shots. */
+	/** Minimum time between shots of the whole formation. */
 	private Cooldown shootingCooldown;
 	/** Number of ships in the formation - horizontally. */
 	private int nShipsWide;
@@ -162,8 +162,11 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		this.height = (this.nShipsHigh - 1) * SEPARATION_DISTANCE
 				+ this.shipHeight;
 
-		for (List<EnemyShip> column : this.enemyShips)
-			this.shooters.add(column.get(column.size() - 1));
+		for (List<EnemyShip> column : this.enemyShips) {
+			EnemyShip shooter = column.get(column.size() - 1);
+			shooter.setShootingCooldown(createShooterCooldown());
+			this.shooters.add(shooter);
+		}
 	}
 
 	/**
@@ -331,15 +334,28 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	 *            Bullets set to add the bullet being shot.
 	 */
 	public final void shoot(final Set<Bullet> bullets) {
-		// For now, only ships in the bottom row are able to shoot.
-		int index = (int) (Math.random() * this.shooters.size());
-		EnemyShip shooter = this.shooters.get(index);
+		if (!this.shootingCooldown.checkFinished())
+			return;
 
-		if (this.shootingCooldown.checkFinished()) {
-			this.shootingCooldown.reset();
-			bullets.add(BulletPool.getBullet(shooter.getPositionX()
-					+ shooter.width / 2, shooter.getPositionY(), BULLET_SPEED));
-		}
+		List<EnemyShip> readyShooters = new ArrayList<EnemyShip>();
+		for (EnemyShip shooter : this.shooters)
+			if (shooter.canShoot())
+				readyShooters.add(shooter);
+		if (readyShooters.isEmpty())
+			return;
+
+		int index = (int) (Math.random() * readyShooters.size());
+		EnemyShip shooter = readyShooters.get(index);
+		this.shootingCooldown.reset();
+		shooter.resetShootingCooldown();
+		bullets.add(BulletPool.getBullet(shooter.getPositionX()
+				+ shooter.width / 2, shooter.getPositionY(), BULLET_SPEED));
+	}
+
+	/** Creates a cooldown for one shooter, based on the level's settings. */
+	private Cooldown createShooterCooldown() {
+		return Core.getVariableCooldown(this.shootingInterval / 2,
+				this.shootingVariance / 2);
 	}
 
 	/**
@@ -371,9 +387,10 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 			EnemyShip nextShooter = getNextShooter(this.enemyShips
 					.get(destroyedShipColumnIndex));
 
-			if (nextShooter != null)
+			if (nextShooter != null) {
+				nextShooter.setShootingCooldown(destroyedShip.getShootingCooldown());
 				this.shooters.set(destroyedShipIndex, nextShooter);
-			else {
+			} else {
 				this.shooters.remove(destroyedShipIndex);
 				this.logger.info("Shooters list reduced to "
 						+ this.shooters.size() + " members.");
@@ -382,6 +399,20 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
 		this.shipCount--;
 	}
+
+    /**
+     * Called by the Movement System when an enemy ship touches the player.
+     * Destroys the ship and removes it from the shooters in the same frame.
+     *
+     * @param enemyShip Ship that collided with the player.
+     * @return True if the ship was destroyed now, false if it was already destroyed.
+     */
+    public final boolean destroyOnPlayerCollision(final EnemyShip enemyShip) {
+        if (enemyShip == null || enemyShip.isDestroyed())
+            return false;
+        destroy(enemyShip);
+        return true;
+    }
 
 	/**
 	 * Gets the ship on a given column that will be in charge of shooting.
