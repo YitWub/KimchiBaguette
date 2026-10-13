@@ -23,9 +23,9 @@ import entity.Ship;
 
 /**
  * Implements the game screen, where the action happens.
- * 
+ *
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
- * 
+ *
  */
 public class GameScreen extends Screen {
 
@@ -47,6 +47,8 @@ public class GameScreen extends Screen {
 	private static final int BOSS_DAMAGE_PER_HIT = 50;
 	/** Time the boss explosion stays on screen. */
 	private static final int BOSS_EXPLOSION_TIME = 500;
+	/** Stages where a boss appears (agreed with the team, may change). */
+	private static final int[] BOSS_LEVELS = { 3, 5, 7 };
 
 	/** Current game difficulty settings. */
 	private GameSettings gameSettings;
@@ -91,7 +93,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Constructor, establishes the properties of the screen.
-	 * 
+	 *
 	 * @param gameState
 	 *            Current game state.
 	 * @param gameSettings
@@ -106,8 +108,8 @@ public class GameScreen extends Screen {
 	 *            Frames per second, frame rate at which the game is run.
 	 */
 	public GameScreen(final GameState gameState,
-			final GameSettings gameSettings, final boolean bonusLife,
-			final int width, final int height, final int fps) {
+					  final GameSettings gameSettings, final boolean bonusLife,
+					  final int width, final int height, final int fps) {
 		super(width, height, fps);
 
 		this.gameSettings = gameSettings;
@@ -137,9 +139,10 @@ public class GameScreen extends Screen {
 		// Logs boss events until HUD and Visual Effect listeners are added.
 		this.bossManager.getEventManager().addListener(
 				new LoggingBossEventListener());
-		// TODO: spawn only on boss levels (Level Design System).
-		this.boss = this.bossManager.spawn(new BossSpawnRequest(
-				Boss.BossType.BOSS_A, this.width / 2, 78, this.level, 0));
+		// The boss appears only on boss stages.
+		if (isBossLevel(this.level))
+			this.boss = this.bossManager.spawn(new BossSpawnRequest(
+					Boss.BossType.BOSS_A, this.width / 2, 78, this.level, 0));
 		this.bossExplosionCooldown = Core.getCooldown(BOSS_EXPLOSION_TIME);
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
@@ -158,7 +161,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Starts the action.
-	 * 
+	 *
 	 * @return Next screen code.
 	 */
 	public final int run() {
@@ -290,7 +293,7 @@ public class GameScreen extends Screen {
 		if (!this.inputDelay.checkFinished()) {
 			int countdown = (int) ((INPUT_DELAY
 					- (System.currentTimeMillis()
-							- this.gameStartTime)) / 1000);
+					- this.gameStartTime)) / 1000);
 			drawManager.drawCountDown(this, this.level, countdown,
 					this.bonusLife);
 			drawManager.drawHorizontalLine(this, this.height / 2 - this.height
@@ -396,7 +399,7 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Checks if two entities are colliding.
-	 * 
+	 *
 	 * @param a
 	 *            First entity, the bullet.
 	 * @param b
@@ -420,8 +423,22 @@ public class GameScreen extends Screen {
 	}
 
 	/**
+	 * Checks if a boss appears in the given stage.
+	 *
+	 * @param level
+	 *            Stage number, starting at 1.
+	 * @return True if the stage is a boss stage.
+	 */
+	private static boolean isBossLevel(final int level) {
+		for (int bossLevel : BOSS_LEVELS)
+			if (bossLevel == level)
+				return true;
+		return false;
+	}
+
+	/**
 	 * Returns a GameState object representing the status of the game.
-	 * 
+	 *
 	 * @return Current game state.
 	 */
 	public final GameState getGameState() {
