@@ -13,6 +13,11 @@ import engine.DrawManager.SpriteType;
  */
 public class Boss extends Entity {
 
+    /** Width of the boss in pixels. */
+    public static final int WIDTH = 16 * 2;
+    /** Height of the boss in pixels. */
+    public static final int HEIGHT = 7 * 2;
+
     /** States the boss can be in. */
     public enum State {
         IDLE, MOVING, ATTACKING, HIT, DEFEATED
@@ -91,7 +96,7 @@ public class Boss extends Entity {
      */
     public Boss(final int positionX, final int positionY, final BossType type) {
         // Temporarily reuses the bonus ship sprite (16 x 7 cells, 2px each).
-        super(positionX, positionY, 16 * 2, 7 * 2, Color.MAGENTA);
+        super(positionX, positionY, WIDTH, HEIGHT, Color.MAGENTA);
         this.spriteType = SpriteType.EnemyShipSpecial;
 
         this.type = type;
@@ -151,9 +156,11 @@ public class Boss extends Entity {
             this.currentHealth = this.maxHealth;
 
         this.state = State.HIT;
-        updatePhase();
 
-        if (this.currentHealth == 0)
+        // A defeated boss does not change phase.
+        if (this.currentHealth > 0)
+            updatePhase();
+        else
             defeat();
     }
 

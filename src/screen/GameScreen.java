@@ -142,7 +142,8 @@ public class GameScreen extends Screen {
 		// The boss appears only on boss stages.
 		if (isBossLevel(this.level))
 			this.boss = this.bossManager.spawn(new BossSpawnRequest(
-					Boss.BossType.BOSS_A, this.width / 2, 78, this.level, 0));
+					Boss.BossType.BOSS_A, this.width / 2 - Boss.WIDTH / 2, 78,
+					this.level, 0));
 		this.bossExplosionCooldown = Core.getCooldown(BOSS_EXPLOSION_TIME);
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
@@ -233,7 +234,10 @@ public class GameScreen extends Screen {
 			}
 
 			this.ship.update();
-			this.enemyShipFormation.update();
+			// Once every ship and explosion is gone, the formation stops
+			// updating, so it keeps valid position and size values.
+			if (this.enemyShipFormation.iterator().hasNext())
+				this.enemyShipFormation.update();
 			// An empty formation has no shooters left, so it must not shoot.
 			if (!this.enemyShipFormation.isEmpty())
 				this.enemyShipFormation.shoot(this.bullets);
@@ -364,7 +368,9 @@ public class GameScreen extends Screen {
 					this.enemyShipSpecialExplosionCooldown.reset();
 					recyclable.add(bullet);
 				}
+				// A bullet that already hit a ship cannot also hit the boss.
 				if (this.boss != null && !this.boss.isDefeated()
+						&& !recyclable.contains(bullet)
 						&& checkCollision(bullet, this.boss)) {
 					this.boss.takeDamage(BOSS_DAMAGE_PER_HIT);
 					this.bossManager.sync();
