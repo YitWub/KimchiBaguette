@@ -21,18 +21,25 @@ public class Boss extends Entity {
     /** Kinds of bosses and their base values. */
     public enum BossType {
         /** Slow boss. */
-        BOSS_A(1000, 1),
-        /** Fast boss. */
-        BOSS_B(800, 3);
+        BOSS_A(1000, 1, 0.6, 0.3),
+        /** Fast boss, gets stronger earlier. */
+        BOSS_B(800, 3, 0.7, 0.4);
 
         /** Maximum health of this kind of boss. */
         private final int maxHealth;
         /** Base horizontal speed in pixels per frame. */
         private final int speed;
+        /** Phase 2 starts below this share of max health. */
+        private final double phase2Threshold;
+        /** Phase 3 starts below this share of max health. */
+        private final double phase3Threshold;
 
-        BossType(final int maxHealth, final int speed) {
+        BossType(final int maxHealth, final int speed,
+                 final double phase2Threshold, final double phase3Threshold) {
             this.maxHealth = maxHealth;
             this.speed = speed;
+            this.phase2Threshold = phase2Threshold;
+            this.phase3Threshold = phase3Threshold;
         }
 
         public int getMaxHealth() {
@@ -42,12 +49,16 @@ public class Boss extends Entity {
         public int getSpeed() {
             return this.speed;
         }
+
+        public double getPhase2Threshold() {
+            return this.phase2Threshold;
+        }
+
+        public double getPhase3Threshold() {
+            return this.phase3Threshold;
+        }
     }
 
-    /** Phase 2 starts below this share of max health. */
-    private static final double PHASE_2_THRESHOLD = 0.6;
-    /** Phase 3 starts below this share of max health. */
-    private static final double PHASE_3_THRESHOLD = 0.3;
     /** Extra speed added in phase 2. */
     private static final int PHASE_2_SPEED_BONUS = 1;
     /** Extra speed added in phase 3. */
@@ -147,16 +158,17 @@ public class Boss extends Entity {
     }
 
     /**
-     * Updates the phase from the current health ratio.
+     * Updates the phase from the current health ratio, using the
+     * thresholds of this kind of boss.
      * Each threshold is applied only once and the phase never goes back.
      */
     private void updatePhase() {
         double healthRatio = (double) this.currentHealth / this.maxHealth;
 
-        if (this.phase < 3 && healthRatio < PHASE_3_THRESHOLD) {
+        if (this.phase < 3 && healthRatio < this.type.getPhase3Threshold()) {
             this.phase = 3;
             this.speed = this.type.getSpeed() + PHASE_3_SPEED_BONUS;
-        } else if (this.phase < 2 && healthRatio < PHASE_2_THRESHOLD) {
+        } else if (this.phase < 2 && healthRatio < this.type.getPhase2Threshold()) {
             this.phase = 2;
             this.speed = this.type.getSpeed() + PHASE_2_SPEED_BONUS;
         }
