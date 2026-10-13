@@ -59,6 +59,13 @@ public final class PlayerStatSourceTest {
 		time.setLong(cooldown, timeValue);
 	}
 
+	private static void setNextShotTime(final Ship ship, final long timeValue)
+			throws Exception {
+		Field nextShotTime = Ship.class.getDeclaredField("nextShotTime");
+		nextShotTime.setAccessible(true);
+		nextShotTime.setLong(ship, timeValue);
+	}
+
 	private static void checkCooldownValidation() {
 		try {
 			Core.getCooldown(0);
@@ -155,11 +162,24 @@ public final class PlayerStatSourceTest {
 		check(speedster.getShipType().getBulletType() == BulletType.RAPID,
 				"Speedster selects rapid ammunition");
 		int rapidCount = speedster.shoot(rapidBullets);
-		Thread.sleep(BulletType.RAPID.getShotDelay() + 20L);
-		rapidCount += speedster.updateBurst(rapidBullets);
-		check(rapidCount == BulletType.RAPID.getShotCount()
+		check(rapidCount == 1 && rapidBullets.size() == rapidCount,
+				"Rapid ammunition fires its first bullet immediately");
+		for (int i = 1; i < BulletType.RAPID.getShotCount(); i++) {
+			int countBefore = rapidBullets.size();
+			setNextShotTime(speedster, 0);
+			int reported = speedster.updateBurst(rapidBullets);
+			int actuallyAdded = rapidBullets.size() - countBefore;
+			check(reported == actuallyAdded && actuallyAdded > 0,
+					"Each rapid burst step reports its actual added bullets");
+			rapidCount += reported;
+		}
+		check(rapidCount == rapidBullets.size()
 				&& rapidBullets.size() == BulletType.RAPID.getShotCount(),
 				"Rapid burst returns the total number of bullets added");
+		setNextShotTime(speedster, 0);
+		check(speedster.updateBurst(rapidBullets) == 0
+				&& rapidBullets.size() == BulletType.RAPID.getShotCount(),
+				"Rapid burst stops after all configured bullets are fired");
 	}
 
 	private static void checkPlayerLifeManagement() {
@@ -184,13 +204,18 @@ public final class PlayerStatSourceTest {
 		check(ship.getBaseShootingInterval() == 750,
 				"Default baseline shooting interval");
 
+		ship.setSpeed(1);
 		ship.setBaseSpeed(4);
-		check(ship.getBaseSpeed() == 4 && ship.getSpeed() == 4,
-				"Changing baseline speed updates current speed");
+		check(ship.getBaseSpeed() == 4 && ship.getSpeed() == 1,
+				"Changing baseline speed preserves a temporary current speed");
 		ship.moveRight();
-		check(ship.getPositionX() == 104, "Updated movement speed");
+		check(ship.getPositionX() == 101, "Temporary movement speed remains");
 		ship.moveLeft();
 		check(ship.getPositionX() == 100, "Updated reverse movement speed");
+		ship.setSpeed(2);
+		ship.setBaseSpeed(6);
+		check(ship.getSpeed() == 2,
+				"Changing baseline does not cancel an active slowdown");
 		ship.setSpeed(0);
 		ship.moveRight();
 		check(ship.getPositionX() == 100, "Zero speed disables movement");
@@ -198,16 +223,25 @@ public final class PlayerStatSourceTest {
 		check(ship.getSpeed() == 0,
 				"Invalid speed leaves current speed intact");
 		ship.setSpeed(12);
-		ship.setBaseShootingInterval(1000);
 		ship.setShootingInterval(300);
+		ship.setBaseShootingInterval(1000);
+		check(ship.getShootingInterval() == 300
+				&& ship.getBaseShootingInterval() == 1000,
+				"Changing baseline shooting interval preserves current interval");
 		ship.restoreBaseStats();
-		check(ship.getSpeed() == 4 && ship.getShootingInterval() == 1000,
+		check(ship.getSpeed() == 6 && ship.getShootingInterval() == 1000,
 				"Restoring stats returns to baseline values");
 
 		Ship firingShip = new Ship(100, 100);
 		Set<Bullet> bullets = new HashSet<Bullet>();
-		check(firingShip.shoot(bullets) == 1,
-				"A new ship can fire immediately");
+		int normalCount = firingShip.shoot(bullets);
+		check(normalCount == 1 && bullets.size() == normalCount,
+				"A new ship creates and counts its normal bullet");
+		int originalInterval = firingShip.getShootingInterval();
+		firingShip.setBaseShootingInterval(900);
+		check(firingShip.getBaseShootingInterval() == 900
+				&& firingShip.getShootingInterval() == originalInterval,
+				"Changing base interval does not change the current interval");
 		firingShip.setShootingInterval(60000);
 		check(firingShip.getShootingInterval() == 60000,
 				"Updated shooting interval");

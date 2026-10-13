@@ -227,6 +227,8 @@ public class Ship extends Entity {
 	 *
 	 * @param speed
 	 *            Non-negative movement distance per update.
+	 * @throws IllegalArgumentException
+	 *             If the speed is negative.
 	 */
 	public final void setSpeed(final int speed) {
 		if (speed < 0)
@@ -236,17 +238,18 @@ public class Ship extends Entity {
 	}
 
 	/**
-	 * Sets the baseline movement speed and makes it the current speed.
+	 * Sets the baseline movement speed without changing the current speed.
 	 *
 	 * @param speed
 	 *            Positive movement distance per update.
+	 * @throws IllegalArgumentException
+	 *             If the baseline speed is not positive.
 	 */
 	public final void setBaseSpeed(final int speed) {
 		if (speed <= 0)
 			throw new IllegalArgumentException(
 					"Base ship speed must be positive.");
 		this.baseSpeed = speed;
-		this.speed = speed;
 	}
 
 	/**
@@ -254,6 +257,10 @@ public class Ship extends Entity {
 	 *
 	 * @param shootingInterval
 	 *            Positive interval in milliseconds.
+	 * @throws IllegalArgumentException
+	 *             If the interval is not positive.
+	 * @throws IllegalStateException
+	 *             If the underlying cooldown has variable duration.
 	 */
 	public final void setShootingInterval(final int shootingInterval) {
 		if (shootingInterval <= 0)
@@ -264,16 +271,18 @@ public class Ship extends Entity {
 	}
 
 	/**
-	 * Sets the baseline shooting interval and makes it the current interval.
+	 * Sets the baseline shooting interval without changing the current
+	 * interval or its cooldown timer.
 	 *
 	 * @param shootingInterval
 	 *            Positive interval in milliseconds.
+	 * @throws IllegalArgumentException
+	 *             If the baseline interval is not positive.
 	 */
 	public final void setBaseShootingInterval(final int shootingInterval) {
 		if (shootingInterval <= 0)
 			throw new IllegalArgumentException(
 					"Base shooting interval must be positive (milliseconds).");
-		setShootingInterval(shootingInterval);
 		this.baseShootingInterval = shootingInterval;
 	}
 

@@ -15,31 +15,36 @@ public final class GameScreenMovementTest {
 
 	public static void main(final String[] args) {
 		final int screenWidth = 800;
-		Ship ship = new Ship(400, 100);
-		ship.setSpeed(20);
+		checkMovementAtSpeed(2, screenWidth, "normal speed");
+		checkMovementAtSpeed(20, screenWidth, "high speed");
 
-		for (int i = 0; i < 100; i++) {
+		System.out.println("Game screen movement checks passed.");
+	}
+
+	private static void checkMovementAtSpeed(final int speed,
+			final int screenWidth, final String label) {
+		Ship ship = new Ship(400, 100);
+		ship.setSpeed(speed);
+		for (int i = 0; i < 500; i++) {
 			ship.moveRight();
 			ship.setPositionX(GameScreen.clampShipPositionX(
 					ship.getPositionX(), ship.getWidth(), screenWidth));
+			check(ship.getPositionX() >= 1
+					&& ship.getPositionX() + ship.getWidth() <= screenWidth - 1,
+					"Ship stays inside both horizontal boundaries at " + label);
 		}
-		int rightBoundary = screenWidth - ship.getWidth() - 1;
-		check(ship.getPositionX() == rightBoundary,
-				"High speed can reach the right boundary");
+		check(ship.getPositionX() + ship.getWidth() == screenWidth - 1,
+				"Ship reaches the right boundary at " + label);
 
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < 500; i++) {
 			ship.moveLeft();
 			ship.setPositionX(GameScreen.clampShipPositionX(
 					ship.getPositionX(), ship.getWidth(), screenWidth));
+			check(ship.getPositionX() >= 1
+					&& ship.getPositionX() + ship.getWidth() <= screenWidth - 1,
+					"Ship stays inside both horizontal boundaries at " + label);
 		}
 		check(ship.getPositionX() == 1,
-				"High speed can reach the left boundary");
-
-		check(GameScreen.clampShipPositionX(-100, ship.getWidth(), screenWidth)
-				== 1, "Coordinates clamp at the left boundary");
-		check(GameScreen.clampShipPositionX(2000, ship.getWidth(), screenWidth)
-				== rightBoundary, "Coordinates clamp at the right boundary");
-
-		System.out.println("Game screen movement checks passed.");
+				"Ship reaches the left boundary at " + label);
 	}
 }

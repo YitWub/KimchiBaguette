@@ -23,6 +23,8 @@ public class Cooldown {
 	 * 
 	 * @param milliseconds
 	 *            Time until cooldown period is finished.
+	 * @throws IllegalArgumentException
+	 *             If the cooldown duration is not positive.
 	 */
 	protected Cooldown(final int milliseconds) {
 		if (milliseconds <= 0)
@@ -42,6 +44,9 @@ public class Cooldown {
 	 *            Time until cooldown period is finished.
 	 * @param variance
 	 *            Variance in the cooldown period.
+	 * @throws IllegalArgumentException
+	 *             If the duration is not positive, the variance is negative or
+	 *             not less than the duration.
 	 */
 	protected Cooldown(final int milliseconds, final int variance) {
 		if (milliseconds <= 0)
@@ -76,6 +81,10 @@ public class Cooldown {
 	 *
 	 * @param milliseconds
 	 *            New positive cooldown duration in milliseconds.
+	 * @throws IllegalArgumentException
+	 *             If the duration is not positive.
+	 * @throws IllegalStateException
+	 *             If this cooldown has variable duration.
 	 */
 	public final void setDuration(final int milliseconds) {
 		if (milliseconds <= 0)
