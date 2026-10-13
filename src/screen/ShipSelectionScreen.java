@@ -24,9 +24,9 @@ public class ShipSelectionScreen extends Screen {
     /**
      * Constructor, establishes the properties of the screen.
      *
-     * @param width Screen width.
+     * @param width  Screen width.
      * @param height Screen height.
-     * @param fps Frames per second.
+     * @param fps    Frames per second.
      */
     public ShipSelectionScreen(final int width, final int height, final int fps) {
         super(width, height, fps);
@@ -77,21 +77,8 @@ public class ShipSelectionScreen extends Screen {
     private void draw() {
         drawManager.initDrawing(this);
 
-        drawManager.drawCenteredBigString(this, "SELECT SHIP", this.height / 5);
-
-        for (int i = 0; i < this.shipTypes.length; i++) {
-            boolean isSelected = (i == this.selectedIndex);
-            ShipType type = this.shipTypes[i];
-
-            String title = (isSelected ? "> " : "  ") + type.getName();
-            String stats = "SPD " + type.getSpeed() + "  HP " + type.getMaxLives();
-
-            drawManager.drawCenteredRegularString(this, title, this.height / 2 + i * 50);
-            drawManager.drawCenteredRegularString(this, stats, this.height / 2 + i * 50 + 20);
-        }
-
-        drawManager.drawCenteredRegularString(this, "Press SPACE to start", this.height * 9 / 10);
         drawManager.drawShipSelection(this, this.selectedIndex, this.shipTypes);
+
         drawManager.completeDrawing(this);
     }
 
