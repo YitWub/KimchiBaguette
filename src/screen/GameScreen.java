@@ -231,15 +231,21 @@ public class GameScreen extends Screen {
 
 			this.ship.update();
 			this.enemyShipFormation.update();
-			this.enemyShipFormation.shoot(this.bullets);
+			// An empty formation has no shooters left, so it must not shoot.
+			if (!this.enemyShipFormation.isEmpty())
+				this.enemyShipFormation.shoot(this.bullets);
 		}
 
 		manageCollisions();
 		cleanBullets();
 		draw();
 
-		if ((this.enemyShipFormation.isEmpty()
-				|| !this.playerStatus.isAlive()) && !this.levelFinished) {
+		// The level is cleared only when the enemies and the boss are gone.
+		// The boss becomes null after its defeat explosion has been shown.
+		boolean levelCleared = this.enemyShipFormation.isEmpty()
+				&& this.boss == null;
+		if ((levelCleared || !this.playerStatus.isAlive())
+				&& !this.levelFinished) {
 			this.levelFinished = true;
 			this.screenFinishedCooldown.reset();
 		}
