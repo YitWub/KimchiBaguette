@@ -10,10 +10,10 @@ Our team's goal is to diversify the player and enemy ship systems in Space Invad
 | Felicie Pene | Weapon Developer & projectile developer 1| [Felicie Pene](https://github.com/feliciepene) |
 | Lena Matejic | player ship Developer | [Lena Matejic](https://github.com/Lenamtj) |
 | BRAMI Édouard | Enemy Movement Developer | [BRAMI Édouard](https://github.com/EdouardBrami) |
-| Yongwon Kim | Collaborator & Player Status&Buff/Debuff 1 | [Yongwon Kim](https://github.com/YitWub/YitWub) |
-| Chaemin Oh | Boss System Developer 1| [Chaemin Oh](https://github.com/Littlecocoa/Littlecocoa) |
-| Jiye Kwon | Player Status&Buff/Debuff 2| [Jiye Kwon](https://github.com/kwon-jiye/kwon-jiye.git) |
-| Yoon-ah Ji | Boss System Developer 2 | [Yoon-ah Ji](https://github.com/jiyoonah/jiyoonah) |
+| Yongwon Kim | Collaborator & Player Status&Buff/Debuff 1 | [Yongwon Kim](https://github.com/YitWub) |
+| Chaemin Oh | Boss System Developer 1| [Chaemin Oh](https://github.com/Littlecocoa) |
+| Jiye Kwon | Player Status&Buff/Debuff 2| [Jiye Kwon](https://github.com/kwon-jiye) |
+| Yoon-ah Ji | Boss System Developer 2 | [Yoon-ah Ji](https://github.com/jiyoonah) |
 | Junah noh | Weapon Developer & projectile developer 2| [Junah noh](https://github.com/noh1216) |
 
 
