@@ -400,6 +400,20 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		this.shipCount--;
 	}
 
+    /**
+     * Called by the Movement System when an enemy ship touches the player.
+     * Destroys the ship and removes it from the shooters in the same frame.
+     *
+     * @param enemyShip Ship that collided with the player.
+     * @return True if the ship was destroyed now, false if it was already destroyed.
+     */
+    public final boolean destroyOnPlayerCollision(final EnemyShip enemyShip) {
+        if (enemyShip == null || enemyShip.isDestroyed())
+            return false;
+        destroy(enemyShip);
+        return true;
+    }
+
 	/**
 	 * Gets the ship on a given column that will be in charge of shooting.
 	 * 
