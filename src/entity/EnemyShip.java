@@ -173,18 +173,18 @@ public class EnemyShip extends Entity {
 			this.shootingCooldown.reset();
 	}
 
-    /**
-     * Creates an enemy ship of the given type, for the Level Design system.
-     *
-     * @param type      Type of enemy to create (A, B or C).
-     * @param positionX Initial position in the X axis.
-     * @param positionY Initial position in the Y axis.
-     * @return New enemy ship of the given type.
-     */
-    public static EnemyShip createByType(final EnemyType type,
-                                         final int positionX, final int positionY) {
-        if (type == null)
-            throw new IllegalArgumentException("Enemy type cannot be null.");
-        return new EnemyShip(positionX, positionY, type.getSpriteType());
-    }
+	/**
+	 * Creates an enemy ship of the given type, for the Level Design system.
+	 *
+	 * @param type      Type of enemy to create (A, B or C).
+	 * @param positionX Initial position in the X axis.
+	 * @param positionY Initial position in the Y axis.
+	 * @return New enemy ship of the given type.
+	 */
+	public static EnemyShip createByType(final EnemyType type,
+			final int positionX, final int positionY) {
+		if (type == null)
+			throw new IllegalArgumentException("Enemy type cannot be null.");
+		return new EnemyShip(positionX, positionY, type.getSpriteType());
+	}
 }
