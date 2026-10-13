@@ -414,6 +414,46 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
         return true;
     }
 
+    /**
+     * Returns the number of enemy ships still alive, for the HUD.
+     *
+     * @return Remaining enemy ships.
+     */
+    public final int getRemainingCount() {
+        return this.shipCount;
+    }
+
+    /**
+     * Returns the number of enemy ships at the start of the level.
+     *
+     * @return Total enemy ships.
+     */
+    public final int getTotalCount() {
+        return this.nShipsWide * this.nShipsHigh;
+    }
+
+    /**
+     * Returns the number of enemy ships destroyed in this level.
+     *
+     * @return Destroyed enemy ships.
+     */
+    public final int getDestroyedCount() {
+        return getTotalCount() - this.shipCount;
+    }
+
+    /**
+     * Returns the points the player can still earn from alive ships.
+     *
+     * @return Remaining points.
+     */
+    public final int getRemainingPoints() {
+        int points = 0;
+        for (List<EnemyShip> column : this.enemyShips)
+            for (EnemyShip ship : column)
+                if (!ship.isDestroyed())
+                    points += ship.getPointValue();
+        return points;
+    }
 	/**
 	 * Gets the ship on a given column that will be in charge of shooting.
 	 * 
