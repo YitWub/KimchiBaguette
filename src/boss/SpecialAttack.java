@@ -56,6 +56,14 @@ public abstract class SpecialAttack {
         return this.windupMilliseconds;
     }
 
+    /**
+     * Restarts the cooldown. Called when a phase that allows the special
+     * attack begins, so the first use also waits for the full cooldown.
+     */
+    public final void restartCooldown() {
+        this.cooldown.reset();
+    }
+
     /** @return True if the cooldown is finished. */
     public final boolean isReady() {
         return this.cooldown.checkFinished();

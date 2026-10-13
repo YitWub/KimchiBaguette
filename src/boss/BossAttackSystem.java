@@ -92,9 +92,12 @@ public final class BossAttackSystem {
     private double buffMultiplier;
     /** Time until the rapid fire effect ends, or null. */
     private Cooldown buffCooldown;
+    /** True after the first update, when the boss battle really begins. */
+    private boolean started;
 
     /**
-     * Constructor. The first attack comes after one attack interval.
+     * Constructor. Cooldowns start on the first {@link #update} call,
+     * so the first attack comes one interval after the battle begins.
      *
      * @param config
      *            Attack data of the boss.
@@ -121,9 +124,14 @@ public final class BossAttackSystem {
     public void setPhase(final int newPhase) {
         if (newPhase == this.phase)
             return;
+        boolean specialWasEnabled = this.config.getPhase(this.phase)
+                .isSpecialEnabled();
         this.phase = newPhase;
         this.pendingSpecial = null;
         restartAttackCooldown();
+        // The special cooldown starts when its phase begins (PRD 2.5).
+        if (!specialWasEnabled)
+            restartSpecialCooldownIfEnabled();
     }
 
     /** Stops all attacks, used when the boss is defeated. */
@@ -149,6 +157,16 @@ public final class BossAttackSystem {
             final int targetX, final int targetY) {
         if (!this.active)
             return null;
+
+        // GameScreen calls this only after its input delay, like
+        // EnemyShipFormation, so the countdown does not use up the first
+        // attack interval.
+        if (!this.started) {
+            this.started = true;
+            restartAttackCooldown();
+            restartSpecialCooldownIfEnabled();
+            return null;
+        }
 
         if (this.buffCooldown != null && this.buffCooldown.checkFinished()) {
             this.buffCooldown = null;
@@ -205,6 +223,14 @@ public final class BossAttackSystem {
                 * this.config.getPhase(this.phase).getIntervalMultiplier()
                 * this.buffMultiplier;
         return Math.max(MIN_INTERVAL, (int) Math.round(interval));
+    }
+
+    /** Restarts the special cooldown if the current phase allows it. */
+    private void restartSpecialCooldownIfEnabled() {
+        SpecialAttack special = this.config.getSpecialAttack();
+        if (special != null
+                && this.config.getPhase(this.phase).isSpecialEnabled())
+            special.restartCooldown();
     }
 
     /** Starts waiting for the next attack with the current interval. */
