@@ -158,17 +158,15 @@ public class GameScreen extends Screen {
 				boolean moveLeft = inputManager.isKeyDown(KeyEvent.VK_LEFT)
 						|| inputManager.isKeyDown(KeyEvent.VK_A);
 
-				boolean isRightBorder = this.ship.getPositionX()
-						+ this.ship.getWidth() + this.ship.getSpeed() > this.width - 1;
-				boolean isLeftBorder = this.ship.getPositionX()
-						- this.ship.getSpeed() < 1;
-
-				if (moveRight && !isRightBorder) {
+				if (moveRight) {
 					this.ship.moveRight();
 				}
-				if (moveLeft && !isLeftBorder) {
+				if (moveLeft) {
 					this.ship.moveLeft();
 				}
+				this.ship.setPositionX(clampShipPositionX(
+						this.ship.getPositionX(), this.ship.getWidth(),
+						this.width));
 				if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
 					if (this.ship.shoot(this.bullets))
 						this.bulletsShot++;
@@ -211,6 +209,25 @@ public class GameScreen extends Screen {
 		if (this.levelFinished && this.screenFinishedCooldown.checkFinished())
 			this.isRunning = false;
 
+	}
+
+	/**
+	 * Clamps the player's ship to the visible horizontal screen area.
+	 *
+	 * @param positionX
+	 *            Proposed left coordinate of the ship.
+	 * @param shipWidth
+	 *            Width of the ship.
+	 * @param screenWidth
+	 *            Width of the screen.
+	 * @return A left coordinate within the screen boundaries.
+	 */
+	static int clampShipPositionX(final int positionX, final int shipWidth,
+			final int screenWidth) {
+		final int leftBoundary = 1;
+		final int rightBoundary = Math.max(leftBoundary,
+				screenWidth - shipWidth - 1);
+		return Math.max(leftBoundary, Math.min(positionX, rightBoundary));
 	}
 
 	/**
