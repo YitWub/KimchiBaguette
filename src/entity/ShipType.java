@@ -1,3 +1,4 @@
+// ShipType enum definition
 package entity;
 
 /**
