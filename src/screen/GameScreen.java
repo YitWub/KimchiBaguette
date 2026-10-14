@@ -495,7 +495,8 @@ public class GameScreen extends Screen {
 	 * @return Damage per bullet.
 	 */
 	private int getBossDamagePerBullet() {
-		if (this.shipType.getBulletType() == BulletType.RAPID)
+		// The current type, which can change during the game.
+		if (this.ship.getCurrentBulletType() == BulletType.RAPID)
 			return BOSS_DAMAGE_PER_SHOT
 					/ BulletType.RAPID.getShotCount();
 		return BOSS_DAMAGE_PER_SHOT;

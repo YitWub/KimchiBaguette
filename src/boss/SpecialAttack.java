@@ -25,8 +25,6 @@ public abstract class SpecialAttack {
     private final int windupMilliseconds;
     /** Time until the special attack can be used again. */
     private final Cooldown cooldown;
-    /** Wait before the first use in a phase, or null after the first use. */
-    private Cooldown firstUseDelay;
 
     /**
      * Constructor.
@@ -59,22 +57,12 @@ public abstract class SpecialAttack {
     }
 
     /**
-     * Starts the wait before the first use. Called when a phase that allows
-     * the special attack begins. The first use comes after this delay, and
-     * every later use waits for the full cooldown.
+     * Checks the cooldown between two uses. The first use in a phase does
+     * not wait for it (see BossAttackSystem).
      *
-     * @param delayMilliseconds
-     *            Time from the start of the phase to the first use.
+     * @return True if the cooldown is finished.
      */
-    public final void startFirstUseDelay(final int delayMilliseconds) {
-        this.firstUseDelay = Core.getCooldown(Math.max(1, delayMilliseconds));
-        this.firstUseDelay.reset();
-    }
-
-    /** @return True if the special attack can be used now. */
     public final boolean isReady() {
-        if (this.firstUseDelay != null)
-            return this.firstUseDelay.checkFinished();
         return this.cooldown.checkFinished();
     }
 
@@ -96,7 +84,6 @@ public abstract class SpecialAttack {
     public final List<BossBullet> execute(final int originX,
             final int originY, final int targetX, final int targetY,
             final int damage) {
-        this.firstUseDelay = null;
         this.cooldown.reset();
         return perform(originX, originY, targetX, targetY, damage);
     }

@@ -201,6 +201,16 @@ public class Ship extends Entity {
 		this.nextShotTime = 0;
 	}
 
+	/**
+	 * Returns the bullet type the ship is firing now. It can differ from the
+	 * ship type's default after setBulletType().
+	 *
+	 * @return Current bullet type.
+	 */
+	public final BulletType getCurrentBulletType() {
+		return this.currentBulletType;
+	}
+
 	public final void setSpeed(final int speed) {
 		if (speed <= 0) {
 			throw new IllegalArgumentException(
