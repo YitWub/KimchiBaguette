@@ -418,8 +418,10 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	 * 
 	 * @param bullets
 	 *            Bullets set to add the bullet being shot.
+	 * @param player
+	 *            Player ship.
 	 */
-	public final void shoot(final Set<Bullet> bullets) {
+	public final void shoot(final Set<Bullet> bullets, final Ship player) {
 		if (!this.shootingCooldown.checkFinished())
 			return;
 
@@ -434,8 +436,31 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		EnemyShip shooter = readyShooters.get(index);
 		this.shootingCooldown.reset();
 		shooter.resetShootingCooldown();
-		bullets.add(BulletPool.getBullet(shooter.getPositionX()
-				+ shooter.width / 2, shooter.getPositionY(), BULLET_SPEED));
+
+		// Bullet guidance
+		int enemyX = shooter.getPositionX() + shooter.width /2;
+		int enemyY = shooter.getPositionY();
+		int playerX = player.getPositionX() + player.width /2;
+		int playerY = player.getPositionY() + player.height /2;
+
+		double dx = playerX - enemyX;
+		double dy = playerY - enemyY;
+		double distance = Math.sqrt(dx * dx + dy * dy);
+
+		int speedX = 0;
+		int speedY = BULLET_SPEED;
+
+		if(distance > 0){
+			speedX = (int) Math.round((dx / distance) * BULLET_SPEED);
+			speedY = (int) Math.round((dy / distance) * BULLET_SPEED);
+		}
+
+		bullets.add(BulletPool.getBullet(
+			enemyX,
+			enemyY,
+			speedY,
+			speedX
+		));
 	}
 
 	/** Creates a cooldown for one shooter, based on the level's settings. */
