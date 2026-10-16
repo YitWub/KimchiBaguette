@@ -44,6 +44,13 @@ public class GameScreen extends Screen {
 	private static final int BONUS_SHIP_EXPLOSION = 500;
 	/** Time from finishing the level to screen change. */
 	private static final int SCREEN_CHANGE_INTERVAL = 1500;
+	/**
+	 * Enables the debug keys used to exercise player status by hand. Off
+	 * unless the game is started with -Dinvaders.debugKeys=true, so a normal
+	 * play session on main never has them.
+	 */
+	private static final boolean DEBUG_KEYS =
+			Boolean.getBoolean("invaders.debugKeys");
 	/** Height of the interface separation line. */
 	private static final int SEPARATION_LINE_HEIGHT = 40;
 	/** Damage dealt to the boss by one player shot (to confirm with the
@@ -85,6 +92,8 @@ public class GameScreen extends Screen {
 	private int score;
 	/** Player lives left. */
 	private PlayerStatus playerStatus;
+	/** State of the debug shield key on the previous frame. */
+	private boolean shieldDebugKeyWasDown;
 	/** Total bullets shot by the player. */
 	private int bulletsShot;
 	/** Total ships destroyed by the player. */
@@ -239,6 +248,22 @@ public class GameScreen extends Screen {
 						this.width));
 				if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
 					this.bulletsShot += this.ship.shoot(this.bullets);
+
+				// Temporary: the shield has no in-game source until B5 adds
+				// the buff item, so it cannot be verified by playing without
+				// this key. Removed in that PR.
+				if (DEBUG_KEYS) {
+					boolean shieldKeyDown = inputManager
+							.isKeyDown(KeyEvent.VK_F2);
+					// Fires on the press, not every frame the key is held,
+					// so holding F2 cannot chain shields over the expiry and
+					// hide the very timing this key exists to show.
+					if (shieldKeyDown && !this.shieldDebugKeyWasDown) {
+						this.playerStatus.activateShield();
+						this.logger.info("Debug shield granted.");
+					}
+					this.shieldDebugKeyWasDown = shieldKeyDown;
+				}
 			}
 
 			if (this.enemyShipSpecial != null) {
