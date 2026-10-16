@@ -1,21 +1,25 @@
 package engine;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import currency.PlayerAssets;
+import audio.AudioControls;
+import screen.AudioControlScreen;
 import screen.GameScreen;
 import screen.HighScoreScreen;
+import screen.InfiniteGameScreen;
 import screen.ScoreScreen;
 import screen.Screen;
 import screen.TitleScreen;
-import screen.ShipSelectionScreen;
-import entity.ShipType;
-
+import campaign.CampaignStageData;
+import campaign.CampaignManager;
+import screen.SettingsScreen;
+import screen.ControlsSettingsScreen;
+import screen.GameplaySettingsScreen;
 
 /**
  * Implements core game logic.
@@ -36,37 +40,13 @@ public final class Core {
 	private static final int MAX_LIVES = 3;
 	/** Levels between extra life. */
 	private static final int EXTRA_LIFE_FRECUENCY = 3;
-	/** Total number of levels. */
-	private static final int NUM_LEVELS = 7;
-	
-	/** Difficulty settings for level 1. */
-	private static final GameSettings SETTINGS_LEVEL_1 =
-			new GameSettings(5, 4, 60, 2800);
-	/** Difficulty settings for level 2. */
-	private static final GameSettings SETTINGS_LEVEL_2 =
-			new GameSettings(5, 5, 50, 3500);
-	/** Difficulty settings for level 3. */
-	private static final GameSettings SETTINGS_LEVEL_3 =
-			new GameSettings(6, 5, 40, 2100);
-	/** Difficulty settings for level 4. */
-	private static final GameSettings SETTINGS_LEVEL_4 =
-			new GameSettings(6, 6, 30, 2100);
-	/** Difficulty settings for level 5. */
-	private static final GameSettings SETTINGS_LEVEL_5 =
-			new GameSettings(7, 6, 20, 1400);
-	/** Difficulty settings for level 6. */
-	private static final GameSettings SETTINGS_LEVEL_6 =
-			new GameSettings(7, 7, 10, 1400);
-	/** Difficulty settings for level 7. */
-	private static final GameSettings SETTINGS_LEVEL_7 =
-			new GameSettings(8, 7, 2, 700);
 	
 	/** Frame to draw the screen on. */
 	private static Frame frame;
 	/** Screen currently shown. */
 	private static Screen currentScreen;
-	/** Difficulty settings list. */
-	private static List<GameSettings> gameSettings;
+	/** Player assets shared across levels and new games in this session. */
+	private static PlayerAssets playerAssets;
 	/** Application logger. */
 	private static final Logger LOGGER = Logger.getLogger(Core.class
 			.getSimpleName());
@@ -100,21 +80,14 @@ public final class Core {
 			// TODO handle exception
 			e.printStackTrace();
 		}
+		AudioControls.applySettings();
 
 		frame = new Frame(WIDTH, HEIGHT);
 		DrawManager.getInstance().setFrame(frame);
 		int width = frame.getWidth();
 		int height = frame.getHeight();
 
-		gameSettings = new ArrayList<GameSettings>();
-		gameSettings.add(SETTINGS_LEVEL_1);
-		gameSettings.add(SETTINGS_LEVEL_2);
-		gameSettings.add(SETTINGS_LEVEL_3);
-		gameSettings.add(SETTINGS_LEVEL_4);
-		gameSettings.add(SETTINGS_LEVEL_5);
-		gameSettings.add(SETTINGS_LEVEL_6);
-		gameSettings.add(SETTINGS_LEVEL_7);
-		
+		playerAssets = new PlayerAssets();
 		GameState gameState;
 
 		int returnCode = 1;
@@ -130,48 +103,46 @@ public final class Core {
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing title screen.");
 				break;
-
 			case 2:
-				// Ship selection screen before the game starts.
-				currentScreen = new ShipSelectionScreen(width, height, FPS);
-				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
-						+ " ship selection screen at " + FPS + " fps.");
-				frame.setScreen(currentScreen);
-				LOGGER.info("Closing ship selection screen.");
-
-				ShipType selectedShip =
-						((ShipSelectionScreen) currentScreen).getSelectedShip();
-
-				gameState = new GameState(1, 0,
-						selectedShip.getMaxLives(), 0, 0);
-
 				// Game & score.
 				do {
 					// One extra live every few levels.
 					boolean bonusLife = gameState.getLevel()
 							% EXTRA_LIFE_FRECUENCY == 0
-							&& gameState.getLivesRemaining()
-							< selectedShip.getMaxLives();
+							&& gameState.getLivesRemaining() < MAX_LIVES;
 					
 					currentScreen = new GameScreen(gameState,
-							gameSettings.get(gameState.getLevel() - 1),
-							bonusLife, width, height, FPS, selectedShip);
-
+							applyDifficulty(CampaignStageData
+									.getStageSettings(gameState.getLevel())),
+							bonusLife, width, height, FPS);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " game screen at " + FPS + " fps.");
 					frame.setScreen(currentScreen);
 					LOGGER.info("Closing game screen.");
 
+					boolean stageCleared = ((GameScreen) currentScreen).isStageCleared();
 					gameState = ((GameScreen) currentScreen).getGameState();
 
-					gameState = new GameState(gameState.getLevel() + 1,
+					if (!stageCleared) {
+						LOGGER.info("Stage " + gameState.getLevel()
+								+ " failed. Not advancing.");
+						break;
+					}
+
+                    CampaignManager.updateMaxCampaignStage(
+                            Math.min(gameState.getLevel() + 1,
+                                    CampaignStageData.getTotalStages())
+                    );
+                    LOGGER.info("Highest Stage is: " + CampaignManager.getMaxCampaignStage());
+
+                    gameState = new GameState(gameState.getLevel() + 1,
 							gameState.getScore(),
 							gameState.getLivesRemaining(),
 							gameState.getBulletsShot(),
 							gameState.getShipsDestroyed());
 
 				} while (gameState.getLivesRemaining() > 0
-						&& gameState.getLevel() <= NUM_LEVELS);
+						&& gameState.getLevel() <= CampaignStageData.getTotalStages());
 
 				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 						+ " score screen at " + FPS + " fps, with a score of "
@@ -179,12 +150,10 @@ public final class Core {
 						+ gameState.getLivesRemaining() + " lives remaining, "
 						+ gameState.getBulletsShot() + " bullets shot and "
 						+ gameState.getShipsDestroyed() + " ships destroyed.");
-
 				currentScreen = new ScoreScreen(width, height, FPS, gameState);
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
 				break;
-
 			case 3:
 				// High scores.
 				currentScreen = new HighScoreScreen(width, height, FPS);
@@ -193,8 +162,43 @@ public final class Core {
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing high score screen.");
 				break;
+			case 4:
+				currentScreen = new SettingsScreen(width, height, FPS);
+				returnCode = frame.setScreen(currentScreen);
+				break;
+			case 5:
+				currentScreen = new AudioControlScreen(width, height, FPS);
+				returnCode = frame.setScreen(currentScreen);
+				break;
+			case 6:
+				currentScreen = new ControlsSettingsScreen(width, height, FPS);
+				returnCode = frame.setScreen(currentScreen);
+				break;
+			case 7:
+				currentScreen = new GameplaySettingsScreen(width, height, FPS);
+				returnCode = frame.setScreen(currentScreen);
+				break;
+			case 8:
+				// Infinite mode & score.
+				currentScreen = new InfiniteGameScreen(gameState, width, height,
+						FPS);
+				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
+						+ " infinite game screen at " + FPS + " fps.");
+				frame.setScreen(currentScreen);
+				LOGGER.info("Closing infinite game screen.");
 
-			default:
+				gameState = ((InfiniteGameScreen) currentScreen).getGameState();
+
+				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
+						+ " score screen at " + FPS + " fps, with a score of "
+						+ gameState.getScore() + ", "
+						+ gameState.getBulletsShot() + " bullets shot and "
+						+ gameState.getShipsDestroyed() + " ships destroyed.");
+				// Infinite mode score screen, Space plays infinite mode again.
+				currentScreen = new ScoreScreen(width, height, FPS, gameState,
+						true);
+				returnCode = frame.setScreen(currentScreen);
+				LOGGER.info("Closing score screen.");
 				break;
 			}
 
@@ -203,6 +207,26 @@ public final class Core {
 		fileHandler.flush();
 		fileHandler.close();
 		System.exit(0);
+	}
+
+	private static GameSettings applyDifficulty(
+			final GameSettings stageSettings) {
+		return applyDifficulty(stageSettings, GameplayConfig.getMultiplier());
+	}
+
+	// The calculation is accessible to tests in the engine package.
+	static GameSettings applyDifficulty(
+			final GameSettings stageSettings, final double multiplier) {
+		int movementInterval = Math.max(1,
+				(int) Math.round(stageSettings.getBaseSpeed() * multiplier));
+		int shootingInterval = Math.max(250,
+				(int) Math.round(
+						stageSettings.getShootingFrecuency() * multiplier));
+
+		return new GameSettings(stageSettings.getFormationWidth(),
+				stageSettings.getFormationHeight(), movementInterval,
+				shootingInterval, stageSettings.getInitialX(),
+				stageSettings.getInitialY());
 	}
 
 	/**
@@ -246,15 +270,6 @@ public final class Core {
 	 */
 	public static FileManager getFileManager() {
 		return FileManager.getInstance();
-	}
-
-	/**
-	 * Returns the maximum number of player lives for the current game setup.
-	 *
-	 * @return Maximum player lives.
-	 */
-	public static int getMaxLives() {
-		return MAX_LIVES;
 	}
 
 	/**

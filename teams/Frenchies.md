@@ -32,6 +32,15 @@ This menu is the central hub that connects players to gameplay, settings, achiev
 | **1.4** | **Implement Settings access:** Provide a direct link from the Main Menu to the Settings module. Display the available audio and visual settings, allow the player to modify them, apply the changes, and return to the Main Menu without losing the selected values. |
 | **1.5** | **Implement Shop and Hangar access:** Provide direct links from the Main Menu to the Shop and Hangar modules. The Shop must allow access to available items and currency, while the Hangar must display the player's available ships and customization options. Return to the Main Menu must be possible from both modules. |
 
+## Additional Agreed Scope
+
+The following features are additional Frenchies team scope for PR #57. They do not replace or renumber the registered requirements above.
+
+- **Configurable gameplay controls:** Allow players to rebind the left, right, and fire actions. Persist bindings between launches, allow Escape to cancel key capture, and reject duplicate bindings.
+- **Gameplay difficulty selection:** Provide Easy, Normal, and Hard options and persist the selected difficulty. Apply the agreed difficulty behavior to campaign stage settings, including enemy movement and shooting intervals.
+
+Integration details affecting campaign stages and enemy behavior will be coordinated with Octopus and KimchiBaguette before merging PR #57. Default movement keys will also be confirmed with KimchiBaguette.
+
 ## Dependencies
 
 The Main Menu depends on the following modules:
@@ -42,6 +51,6 @@ The Main Menu depends on the following modules:
 - **Game Mode Selection** → [Module 10](/teams/friends.md)  
   The Main Menu must allow the player to select between single-player and two-player game modes.
 
-- **Shop & Hangar** → [Modules 4](/teams/Hancode.md), [Module 5](/teams/Best-French.md) & [Module 9](/teams/KimchiBaguette.md) 
+- **Shop & Hangar** → [Modules 4](/teams/HanCode.md), [Module 5](/teams/Best-French.md) & [Module 9](/teams/KimchiBaguette.md) 
   The Main Menu must provide access to the shop, currency, available items, and ship customization.
 

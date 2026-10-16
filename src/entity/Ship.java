@@ -1,324 +1,307 @@
 package entity;
 
-import java.awt.Color;
-import java.util.Set;
-
 import engine.Cooldown;
 import engine.Core;
 import engine.DrawManager.SpriteType;
+import java.awt.Color;
+import java.util.Set;
 
 /**
  * Implements a ship, to be controlled by the player.
  *
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
+ *
  */
 public class Ship extends Entity {
 
-	/** Baseline time between shots in milliseconds. */
-	private int baseShootingInterval;
-	/** Current time between shots in milliseconds. */
-	private int shootingInterval;
-	/** Baseline movement speed of the ship. */
-	private int baseSpeed;
-	/** Current movement speed of the ship. */
-	private int speed;
-	/** The type of bullet the ship is currently using	*/
-	private BulletType currentBulletType = BulletType.NORMAL;
-	/** Remaining number of Bullets */
-	private int remainingShots = 0;
-	/** Delay between shots */
-	private long nextShotTime = 0;
-	/** Speed of the bullets shot by the ship. */
-	private int bulletSpeed = currentBulletType.getSpeed();
-	
-	/** Type of ship selected by the player. */
-	private final ShipType shipType;
+    /** Time between shots. */
+    private static final int SHOOTING_INTERVAL = 400;
 
-	/** Minimum time between shots. */
-	private Cooldown shootingCooldown;
+    /** Speed of the bullets shot by the ship. */
+    private static final int BULLET_SPEED = -6;
 
-	/** Time spent inactive between hits. */
-	private Cooldown destructionCooldown;
+    /** Movement of the ship for each unit of time. */
+    private static final int SPEED = 2;
 
-	/**
-	 * Default constructor.
-	 * Uses the STANDARD ship configuration.
-	 *
-	 * @param positionX
-	 *            Initial position of the ship in the X axis.
-	 * @param positionY
-	 *            Initial position of the ship in the Y axis.
-	 */
-	public Ship(final int positionX, final int positionY) {
-		this(positionX, positionY, ShipType.STANDARD);
-	}
+    /** Whether the Hyperfire buff is currently enabled. */
+    private boolean hyperfireEnabled = false;
 
-	public Ship(final int positionX, final int positionY, final ShipType shipType) {
-		super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
+    /** Time of the last shot. */
+    private long lastShotTime = 0;
 
-		if (shipType == null)
-			throw new IllegalArgumentException("Ship type cannot be null.");
+    /** Time spent inactive between hits. */
+    private Cooldown destructionCooldown;
 
-		this.shipType = shipType;
-		this.baseSpeed = shipType.getSpeed();
-		this.speed = this.baseSpeed;
-		this.baseShootingInterval = shipType.getShootingInterval();
-		this.shootingInterval = shipType.getShootingInterval();
+    private boolean isShieldActive = false;
 
-		this.currentBulletType = shipType.getBulletType();
-		this.bulletSpeed = currentBulletType.getSpeed();
+    private static final Color[] CHAMELEON_COLORS = {
+            Color.CYAN,
+            Color.MAGENTA,
+            Color.YELLOW,
+            Color.ORANGE,
+            Color.BLUE
+    };
 
-		this.spriteType = SpriteType.Ship;
-		this.shootingCooldown = Core.getCooldown(this.shootingInterval);
-		this.destructionCooldown = Core.getCooldown(1000);
-	}
+    private boolean chameleonHullActive;
+    private long chameleonActivationTime;
+    private Color colorBeforeChameleon;
+    private double chameleonMovementRemainder;
 
-	/**
-	 * Moves the ship speed units right.
-	 */
-	public final void moveRight() {
-		this.positionX += this.speed;
-	}
+    private int widthBeforeChameleon;
+    private int heightBeforeChameleon;
+    private int normalPositionY;
 
-	/**
-	 * Moves the ship speed units left.
-	 */
-	public final void moveLeft() {
-		this.positionX -= this.speed;
-	}
+    /** Duration of the damage flashing feedback in milliseconds (0.5s). */
+    private static final int DAMAGE_FEEDBACK_DURATION = 500;
+    /** Rate in ms at which the ship color alternates during damage feedback. */
+    private static final int FLASH_INTERVAL = 100;
+    /** Default normal color of the ship. */
+    private static final Color DEFAULT_COLOR = Color.GREEN;
 
-	/**
-	 * Shoots a bullet upwards.
-	 *
-	 * @param bullets
-	 *            List of bullets on screen, to add the new bullet.
-	 * @return Checks if the bullet was shot correctly.
-	 */
-	public final int shoot(final Set<Bullet> bullets) {
-		if (!this.shootingCooldown.checkFinished()) {
-			return 0;
-		}
+    /** Cooldown tracking the 0.5s damage feedback duration. */
+    private Cooldown damageFeedbackCooldown;
+    /** Timestamp tracking when the damage effect started. */
+    private long damageFeedbackStartTime;
 
-		this.shootingCooldown.reset();
+    /**
+     * Constructor, establishes the ship's properties.
+     *
+     * @param positionX
+     *            Initial position of the ship in the X axis.
+     * @param positionY
+     *            Initial position of the ship in the Y axis.
+     */
+    public Ship(final int positionX, final int positionY) {
+        super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
-		int x = positionX + this.width / 2;
-		int y = positionY;
+        this.spriteType = SpriteType.Ship;
+        this.destructionCooldown = Core.getCooldown(1000);
+        this.damageFeedbackCooldown = Core.getCooldown(DAMAGE_FEEDBACK_DURATION);
+    }
 
-		if (currentBulletType == BulletType.MULTI) {
-			int count = 0;
+    /**
+     * Moves the ship speed uni ts right, or until the right screen border is
+     * reached.
+     */
+    public final void moveRight() {
+        this.positionX += SPEED;
+        addChameleonMovement(1);
+    }
 
-			if (bullets.add(BulletPool.getBullet(x, y, bulletSpeed, -2)))
-				count++;
+    /**
+     * Moves the ship speed units left, or until the left screen border is
+     * reached.
+     */
+    public final void moveLeft() {
+        this.positionX -= SPEED;
+        addChameleonMovement(-1);
+    }
 
-			if (bullets.add(BulletPool.getBullet(x, y, bulletSpeed, 0)))
-				count++;
+    /**
+     * Shoots a bullet upwards.
+     *
+     * @param bullets
+     *            List of bullets on screen, to add the new bullet.
+     * @return Checks if the bullet was shot correctly.
+     */
+    public final boolean shoot(final Set<Bullet> bullets) {
+        if (this.chameleonHullActive) {
+            return false;
+        }
 
-			if (bullets.add(BulletPool.getBullet(x, y, bulletSpeed, 2)))
-				count++;
+        long currentTime = System.currentTimeMillis();
 
-			return count;
-		}
+        int shootingInterval = SHOOTING_INTERVAL;
 
-		boolean added = bullets.add(
-				BulletPool.getBullet(x, y, bulletSpeed));
+        if (this.hyperfireEnabled) {
+            shootingInterval = (int) (SHOOTING_INTERVAL * 0.40);
+        }
 
-		remainingShots = currentBulletType.getShotCount() - 1;
-		nextShotTime = System.currentTimeMillis()
-				+ currentBulletType.getShotDelay();
+        if (lastShotTime == 0
+                || currentTime - lastShotTime >= shootingInterval) {
 
-		return added ? 1 : 0;
-	}
+            lastShotTime = currentTime;
 
-	/**
-	 * Fires remaining bullets in a RAPID burst.
-	 *
-	 * @param bullets Bullets currently on screen.
-	 * @return Number of bullets successfully added.
-	 */
-	public final int updateBurst(final Set<Bullet> bullets) {
-		if (this.remainingShots <= 0 || this.isDestroyed()) {
-			return 0;
-		}
+            bullets.add(BulletPool.getBullet(
+                    positionX + this.width / 2,
+                    positionY,
+                    BULLET_SPEED
+            ));
 
-		long currentTime = System.currentTimeMillis();
+            return true;
+        }
 
-		if (currentTime < this.nextShotTime) {
-			return 0;
-		}
+        return false;
+    }
 
-		int x = this.positionX + this.width / 2;
-		int y = this.positionY;
+    /**
+     * Enables or disables the Hyperfire shooting buff.
+     *
+     * @param enabled True to enable Hyperfire, false to disable it.
+     */
+    public final void setHyperfireEnabled(final boolean enabled) {
+        this.hyperfireEnabled = enabled;
+    }
 
-		boolean added = bullets.add(
-				BulletPool.getBullet(x, y, this.bulletSpeed));
+    /**
+     * Checks whether Hyperfire is currently enabled.
+     */
+    public final boolean isHyperfireEnabled() {
+        return this.hyperfireEnabled;
+    }
 
-		this.remainingShots--;
-		this.nextShotTime = currentTime
-				+ this.currentBulletType.getShotDelay();
+    /**
+     * Updates status and visual feedback of the ship.
+     */
+    public final void update() {
+        if (this.chameleonHullActive) {
+            long elapsed = System.nanoTime() - this.chameleonActivationTime;
 
-		return added ? 1 : 0;
-	}
+            int index = (int) (
+                    (elapsed / entity.item.ChameleonHull.COLOR_INTERVAL_NANOS)
+                            % CHAMELEON_COLORS.length
+            );
 
-	/**
-	 * Updates status of the ship.
-	 */
-	public final void update() {
-		if (!this.destructionCooldown.checkFinished())
-			this.spriteType = SpriteType.ShipDestroyed;
-		else
-			this.spriteType = SpriteType.Ship;
-	}
+            setColor(CHAMELEON_COLORS[index]);
+        } else if (this.damageFeedbackCooldown != null
+                && !this.damageFeedbackCooldown.checkFinished()) {
+            // Alternate red and normal for 0.5s immediately after damage
+            long elapsed = System.currentTimeMillis() - this.damageFeedbackStartTime;
+            if ((elapsed / FLASH_INTERVAL) % 2 == 0) {
+                setColor(Color.RED);
+            } else {
+                setColor(DEFAULT_COLOR);
+            }
+        } else {
+            // Restore default color once the feedback is over
+            setColor(DEFAULT_COLOR);
+        }
 
-	/**
-	 * Switches the ship to its destroyed state.
-	 */
-	public final void destroy() {
-		this.destructionCooldown.reset();
+        if (!this.destructionCooldown.checkFinished())
+            this.spriteType = SpriteType.ShipDestroyed;
+        else
+            this.spriteType = SpriteType.Ship;
+    }
 
-		// Cancel pending brust shots
-		this.remainingShots = 0;
-		this.nextShotTime = 0;
-	}
+    /**
+     * Switches the ship to its destroyed state.
+     */
+    public final void destroy() {
+        if (this.chameleonHullActive) {
+            return;
+        }
 
-	/**
-	 * Checks if the ship is destroyed.
-	 *
-	 * @return True if the ship is currently destroyed.
-	 */
-	public final boolean isDestroyed() {
-		return !this.destructionCooldown.checkFinished();
-	}
+        deactivateChameleonHull();
+        this.destructionCooldown.reset();
+    }
 
-	/**
-	 * Getter for the ship's speed.
-	 *
-	 * @return Speed of the ship.
-	 */
-	public final int getSpeed() {
-		return this.speed;
-	}
+    /**
+     * Checks if the ship is destroyed.
+     *
+     * @return True if the ship is currently destroyed.
+     */
+    public final boolean isDestroyed() {
+        return !this.destructionCooldown.checkFinished();
+    }
 
-	public void setBulletType(final BulletType bulletType) {
-		if (bulletType == null)
-			throw new IllegalArgumentException("Bullet type cannot be null.");
-		this.currentBulletType = bulletType;
-		this.bulletSpeed = bulletType.getSpeed();
-		this.remainingShots = 0;
-		this.nextShotTime = 0;
-	}
+    /**
+     * Getter for the ship's speed.
+     *
+     * @return Speed of the ship.
+     */
+    public final int getSpeed() {
+        return SPEED;
+    }
 
-	/**
-	 * Returns the bullet type the ship is firing now. It can differ from the
-	 * ship type's default after setBulletType().
-	 *
-	 * @return Current bullet type.
-	 */
-	public final BulletType getCurrentBulletType() {
-		return this.currentBulletType;
-	}
+    public boolean isShieldActive() {
+        return this.isShieldActive;
+    }
 
-	/** @return Time between shots in milliseconds. */
-	public final int getShootingInterval() {
-		return this.shootingInterval;
-	}
+    public void setShieldActive(final boolean active) {
+        this.isShieldActive = active;
+    }
 
-	/** @return Baseline movement speed. */
-	public final int getBaseSpeed() {
-		return this.baseSpeed;
-	}
+    public final void activateChameleonHull() {
+        if (!this.chameleonHullActive) {
+            this.colorBeforeChameleon = getColor();
+            this.widthBeforeChameleon = this.width;
+            this.heightBeforeChameleon = this.height;
+            this.normalPositionY = this.positionY;
 
-	/** @return Baseline time between shots in milliseconds. */
-	public final int getBaseShootingInterval() {
-		return this.baseShootingInterval;
-	}
+            this.width = entity.item.ChameleonHull.BALL_SIZE;
+            this.height = entity.item.ChameleonHull.BALL_SIZE;
+        }
 
-	/**
-	 * Changes the ship's current movement speed. Zero stops movement.
-	 *
-	 * @param speed
-	 *            Non-negative movement distance per update.
-	 * @throws IllegalArgumentException
-	 *             If the speed is negative.
-	 */
-	public final void setSpeed(final int speed) {
-		if (speed < 0)
-			throw new IllegalArgumentException(
-					"Ship speed must be non-negative.");
-		this.speed = speed;
-	}
+        this.chameleonHullActive = true;
+        this.chameleonActivationTime = System.nanoTime();
 
-	/**
-	 * Sets the baseline movement speed without changing the current speed.
-	 *
-	 * @param speed
-	 *            Positive movement distance per update.
-	 * @throws IllegalArgumentException
-	 *             If the baseline speed is not positive.
-	 */
-	public final void setBaseSpeed(final int speed) {
-		if (speed <= 0)
-			throw new IllegalArgumentException(
-					"Base ship speed must be positive.");
-		this.baseSpeed = speed;
-	}
+        setColor(CHAMELEON_COLORS[0]);
+    }
 
-	/**
-	 * Changes the firing interval without restarting the current cooldown.
-	 *
-	 * @param shootingInterval
-	 *            Positive interval in milliseconds.
-	 * @throws IllegalArgumentException
-	 *             If the interval is not positive.
-	 * @throws IllegalStateException
-	 *             If the underlying cooldown has variable duration.
-	 */
-	public final void setShootingInterval(final int shootingInterval) {
-		if (shootingInterval <= 0)
-			throw new IllegalArgumentException(
-					"Shooting interval must be positive (milliseconds).");
-		this.shootingCooldown.setDuration(shootingInterval);
-		this.shootingInterval = shootingInterval;
-	}
+    public final void deactivateChameleonHull() {
+        if (this.chameleonHullActive) {
+            setColor(this.colorBeforeChameleon);
 
-	/**
-	 * Sets the baseline shooting interval without changing the current
-	 * interval or its cooldown timer.
-	 *
-	 * @param shootingInterval
-	 *            Positive interval in milliseconds.
-	 * @throws IllegalArgumentException
-	 *             If the baseline interval is not positive.
-	 */
-	public final void setBaseShootingInterval(final int shootingInterval) {
-		if (shootingInterval <= 0)
-			throw new IllegalArgumentException(
-					"Base shooting interval must be positive (milliseconds).");
-		this.baseShootingInterval = shootingInterval;
-	}
+            this.width = this.widthBeforeChameleon;
+            this.height = this.heightBeforeChameleon;
+            this.positionY = this.normalPositionY;
+        }
 
-	/**
-	 * Restores the current speed and shooting interval to their baseline values.
-	 */
-	public final void restoreBaseStats() {
-		this.speed = this.baseSpeed;
-		setShootingInterval(this.baseShootingInterval);
-	}
+        this.chameleonHullActive = false;
+        this.chameleonMovementRemainder = 0;
+    }
 
-	/**
-	 * Getter for the selected ship type.
-	 *
-	 * @return Current ship type.
-	 */
-	public final ShipType getShipType() {
-		return this.shipType;
-	}
+    public final boolean isChameleonHullActive() {
+        return this.chameleonHullActive;
+    }
 
-	/**
-	 * Checks whether this ship type supports a shield.
-	 *
-	 * @return True if the selected ship supports a shield.
-	 */
-	public final boolean isShieldCapable() {
-		return this.shipType.isShieldCapable();
-	}
+    public final double getMovementSpeed() {
+        return SPEED * (
+                this.chameleonHullActive
+                        ? entity.item.ChameleonHull.SPEED_MULTIPLIER
+                        : 1.0
+        );
+    }
+
+    /** Adds the power-up movement; the original movement code is preserved. */
+    private void addChameleonMovement(final int direction) {
+        if (!this.chameleonHullActive) {
+            return;
+        }
+
+        this.chameleonMovementRemainder += direction * SPEED
+                * (entity.item.ChameleonHull.SPEED_MULTIPLIER - 1.0);
+
+        int extraPixels = (int) (
+                this.chameleonMovementRemainder >= 0
+                        ? Math.floor(this.chameleonMovementRemainder + 1e-9)
+                        : Math.ceil(this.chameleonMovementRemainder - 1e-9)
+        );
+
+        this.positionX += extraPixels;
+        this.chameleonMovementRemainder -= extraPixels;
+    }
+
+    public final void moveUp() {
+        if (this.chameleonHullActive && !isDestroyed()) {
+            this.positionY -= (int) getMovementSpeed();
+        }
+    }
+
+    public final void moveDown() {
+        if (this.chameleonHullActive && !isDestroyed()) {
+            this.positionY += (int) getMovementSpeed();
+        }
+    }
+
+    /**
+     * Triggers the 0.5-second red flashing damage feedback.
+     */
+    public final void triggerDamageFeedback() {
+        if (this.chameleonHullActive || this.isShieldActive) {
+            return;
+        }
+        this.damageFeedbackStartTime = System.currentTimeMillis();
+        this.damageFeedbackCooldown.reset();
+    }
 }

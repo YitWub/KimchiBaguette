@@ -15,6 +15,8 @@ public final class InputManager implements KeyListener {
 	private static final int NUM_KEYS = 256;
 	/** Array with the jeys marked as pressed or not. */
 	private static boolean[] keys;
+
+	private volatile int lastPressedKey = KeyEvent.VK_UNDEFINED;
 	/** Singleton instance of the class. */
 	private static InputManager instance;
 
@@ -47,6 +49,16 @@ public final class InputManager implements KeyListener {
 		return keys[keyCode];
 	}
 
+	public int consumeLastPressedKey() {
+		int keyCode = lastPressedKey;
+		lastPressedKey = KeyEvent.VK_UNDEFINED;
+		return keyCode;
+	}
+
+	public void clearLastPressedKey() {
+		lastPressedKey = KeyEvent.VK_UNDEFINED;
+	}
+
 	/**
 	 * Changes the state of the key to pressed.
 	 * 
@@ -55,8 +67,12 @@ public final class InputManager implements KeyListener {
 	 */
 	@Override
 	public void keyPressed(final KeyEvent key) {
-		if (key.getKeyCode() >= 0 && key.getKeyCode() < NUM_KEYS)
+		if (key.getKeyCode() >= 0 && key.getKeyCode() < NUM_KEYS) {
+			if (!keys[key.getKeyCode()]) {
+				lastPressedKey = key.getKeyCode();
+			}
 			keys[key.getKeyCode()] = true;
+		}
 	}
 
 	/**
