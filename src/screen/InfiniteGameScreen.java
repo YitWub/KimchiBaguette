@@ -192,8 +192,9 @@ public class InfiniteGameScreen extends Screen {
 		if (moveLeft && !isLeftBorder)
 			this.ship.moveLeft();
 		if (inputManager.isKeyDown(ControlsConfig.getKey(ControlsConfig.FIRE)))
-			if (this.ship.shoot(this.bullets))
-				this.bulletsShot++;
+			this.bulletsShot += this.ship.shoot(this.bullets);
+		if (!this.ship.isDestroyed())
+			this.bulletsShot += this.ship.updateBurst(this.bullets);
 	}
 
 	/**

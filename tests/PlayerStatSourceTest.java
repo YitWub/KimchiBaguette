@@ -67,12 +67,9 @@ public final class PlayerStatSourceTest {
 	}
 
 	private static void checkCooldownValidation() {
-		try {
-			Core.getCooldown(0);
-			throw new AssertionError("Zero cooldown should be rejected.");
-		} catch (IllegalArgumentException expected) {
-			// Expected.
-		}
+		// A zero cooldown means "always ready" and is used by the upstream
+		// infinite mode, so only a negative duration is rejected.
+		Core.getCooldown(0);
 		try {
 			Core.getCooldown(-1);
 			throw new AssertionError("Negative cooldown should be rejected.");

@@ -18,6 +18,7 @@ import engine.GameState;
 import engine.ControlsConfig;
 import entity.Bullet;
 import entity.BulletPool;
+import entity.BulletType;
 import vfx.ParticleSystem;
 import entity.EnemyShip;
 import entity.EnemyShipFormation;
@@ -317,9 +318,7 @@ public class GameScreen extends Screen {
 				if (inputManager.isKeyDown(
 						ControlsConfig.getKey(ControlsConfig.FIRE))) {
 					if (!this.annihilator.isCharging()) {
-						if (this.ship.shoot(this.bullets)) {
-							this.bulletsShot++;
-						}
+						this.bulletsShot += this.ship.shoot(this.bullets);
 					}
 				}
 
@@ -370,6 +369,9 @@ public class GameScreen extends Screen {
 				this.enemyShipSpecial = null;
 				this.logger.info("The special ship has escaped");
 			}
+
+			if (!this.ship.isDestroyed())
+				this.bulletsShot += this.ship.updateBurst(this.bullets);
 
 			updateBallMovement();
 
@@ -720,10 +722,27 @@ public class GameScreen extends Screen {
 
 	/** Keep the extra movement inside the existing playfield borders. */
 	private void clampShipPosition() {
-		int maximumX = this.width - this.ship.getWidth() - 1;
-		this.ship.setPositionX(
-				Math.max(1, Math.min(maximumX, this.ship.getPositionX()))
-		);
+		this.ship.setPositionX(clampShipPositionX(this.ship.getPositionX(),
+				this.ship.getWidth(), this.width));
+	}
+
+	/**
+	 * Keeps a ship position inside the playfield borders.
+	 *
+	 * @param positionX
+	 *            Position to clamp, on the X axis.
+	 * @param shipWidth
+	 *            Width of the ship being moved.
+	 * @param screenWidth
+	 *            Width of the playfield.
+	 * @return Clamped position on the X axis.
+	 */
+	static int clampShipPositionX(final int positionX, final int shipWidth,
+			final int screenWidth) {
+		final int leftBoundary = 1;
+		final int rightBoundary = Math.max(leftBoundary,
+				screenWidth - shipWidth - 1);
+		return Math.max(leftBoundary, Math.min(positionX, rightBoundary));
 	}
 
 	private void tryDropChameleonHull(final EnemyShip enemy) {

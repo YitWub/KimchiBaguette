@@ -23,8 +23,17 @@ public class Ship extends Entity {
     /** Baseline time between shots, before any buff changes it. */
     private int baseShootingInterval;
 
-    /** Speed of the bullets shot by the ship. */
-    private static final int BULLET_SPEED = -6;
+    /** Bullet type the ship is currently firing. */
+    private BulletType currentBulletType = BulletType.NORMAL;
+
+    /** Bullets still owed by an in-flight RAPID burst. */
+    private int remainingShots = 0;
+
+    /** Time the next bullet of a burst may be fired. */
+    private long nextShotTime = 0;
+
+    /** Speed of the bullets shot by the ship, from the bullet type. */
+    private int bulletSpeed = BulletType.NORMAL.getSpeed();
 
     /** Movement of the ship for each unit of time, from the ship type. */
     private int speed;
@@ -106,6 +115,8 @@ public class Ship extends Entity {
         this.speed = this.baseSpeed;
         this.baseShootingInterval = shipType.getShootingInterval();
         this.shootingInterval = this.baseShootingInterval;
+        this.currentBulletType = shipType.getBulletType();
+        this.bulletSpeed = this.currentBulletType.getSpeed();
         this.spriteType = SpriteType.Ship;
         this.destructionCooldown = Core.getCooldown(1000);
         this.damageFeedbackCooldown = Core.getCooldown(DAMAGE_FEEDBACK_DURATION);
@@ -134,11 +145,11 @@ public class Ship extends Entity {
      *
      * @param bullets
      *            List of bullets on screen, to add the new bullet.
-     * @return Checks if the bullet was shot correctly.
+     * @return Number of bullets added to the screen.
      */
-    public final boolean shoot(final Set<Bullet> bullets) {
+    public final int shoot(final Set<Bullet> bullets) {
         if (this.chameleonHullActive) {
-            return false;
+            return 0;
         }
 
         long currentTime = System.currentTimeMillis();
@@ -149,21 +160,64 @@ public class Ship extends Entity {
             interval = (int) (this.shootingInterval * 0.40);
         }
 
-        if (lastShotTime == 0
-                || currentTime - lastShotTime >= interval) {
-
-            lastShotTime = currentTime;
-
-            bullets.add(BulletPool.getBullet(
-                    positionX + this.width / 2,
-                    positionY,
-                    BULLET_SPEED
-            ));
-
-            return true;
+        if (lastShotTime != 0 && currentTime - lastShotTime < interval) {
+            return 0;
         }
 
-        return false;
+        lastShotTime = currentTime;
+
+        int x = this.positionX + this.width / 2;
+        int y = this.positionY;
+
+        // A MULTI shot spreads sideways and owes no follow-up bullets.
+        if (this.currentBulletType == BulletType.MULTI) {
+            int count = 0;
+            if (bullets.add(BulletPool.getBullet(x, y, this.bulletSpeed, -2)))
+                count++;
+            if (bullets.add(BulletPool.getBullet(x, y, this.bulletSpeed, 0)))
+                count++;
+            if (bullets.add(BulletPool.getBullet(x, y, this.bulletSpeed, 2)))
+                count++;
+            return count;
+        }
+
+        boolean added = bullets.add(
+                BulletPool.getBullet(x, y, this.bulletSpeed));
+
+        this.remainingShots = this.currentBulletType.getShotCount() - 1;
+        this.nextShotTime = currentTime
+                + this.currentBulletType.getShotDelay();
+
+        return added ? 1 : 0;
+    }
+
+    /**
+     * Fires the bullets still owed by a RAPID burst, one per shot delay.
+     *
+     * @param bullets
+     *            List of bullets on screen, to add the new bullet.
+     * @return Number of bullets added to the screen.
+     */
+    public final int updateBurst(final Set<Bullet> bullets) {
+        if (this.remainingShots <= 0 || this.isDestroyed()) {
+            return 0;
+        }
+
+        long currentTime = System.currentTimeMillis();
+
+        if (currentTime < this.nextShotTime) {
+            return 0;
+        }
+
+        boolean added = bullets.add(BulletPool.getBullet(
+                this.positionX + this.width / 2, this.positionY,
+                this.bulletSpeed));
+
+        this.remainingShots--;
+        this.nextShotTime = currentTime
+                + this.currentBulletType.getShotDelay();
+
+        return added ? 1 : 0;
     }
 
     /**
@@ -252,6 +306,31 @@ public class Ship extends Entity {
      */
     public final ShipType getShipType() {
         return this.shipType;
+    }
+
+    /**
+     * Changes the bullet type and cancels any burst still in flight.
+     *
+     * @param bulletType
+     *            New bullet type.
+     */
+    public final void setBulletType(final BulletType bulletType) {
+        if (bulletType == null)
+            throw new IllegalArgumentException("Bullet type cannot be null.");
+        this.currentBulletType = bulletType;
+        this.bulletSpeed = bulletType.getSpeed();
+        this.remainingShots = 0;
+        this.nextShotTime = 0;
+    }
+
+    /**
+     * Returns the bullet type the ship is firing now. It can differ from the
+     * ship type's default after setBulletType().
+     *
+     * @return Current bullet type.
+     */
+    public final BulletType getCurrentBulletType() {
+        return this.currentBulletType;
     }
 
     /** @return Time between shots in milliseconds. */
