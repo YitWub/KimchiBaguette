@@ -20,6 +20,7 @@ import entity.BulletType;
 import entity.EnemyShip;
 import entity.EnemyShipFormation;
 import entity.Entity;
+import entity.LoggingPlayerStatusListener;
 import entity.PlayerStatus;
 import entity.Ship;
 import entity.ShipType;
@@ -188,6 +189,8 @@ public class GameScreen extends Screen {
 		// Logs boss events until HUD and Visual Effect listeners are added.
 		this.bossManager.getEventManager().addListener(
 				new LoggingBossEventListener());
+		// Same for the player's own status events.
+		this.playerStatus.addListener(new LoggingPlayerStatusListener());
 		// The boss appears only on boss stages.
 		if (isBossLevel(this.level))
 			this.bossManager.spawn(new BossSpawnRequest(
@@ -228,6 +231,10 @@ public class GameScreen extends Screen {
 	 */
 	protected final void update() {
 		super.update();
+
+		// Outside the input-delay check: a shield that runs out has to be
+		// announced even while the level is finishing.
+		this.playerStatus.update();
 
 		if (this.inputDelay.checkFinished() && !this.levelFinished) {
 
@@ -571,6 +578,16 @@ public class GameScreen extends Screen {
 			if (bossLevel == level)
 				return true;
 		return false;
+	}
+
+	/**
+	 * Gives the other systems the player's status, to read lives and shield
+	 * state and to register a {@link entity.PlayerStatusListener}.
+	 *
+	 * @return Player status of the current game.
+	 */
+	public final PlayerStatus getPlayerStatus() {
+		return this.playerStatus;
 	}
 
 	/**
