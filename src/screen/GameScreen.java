@@ -377,7 +377,7 @@ public class GameScreen extends Screen {
 
 			this.annihilator.update();
 			this.enemyShipFormation.update();
-			this.enemyShipFormation.shoot(this.bullets);
+			this.enemyShipFormation.shoot(this.bullets, this.ship);
 		}
 
 		this.ship.update();
