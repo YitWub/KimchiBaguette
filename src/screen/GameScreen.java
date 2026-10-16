@@ -22,6 +22,7 @@ import vfx.ParticleSystem;
 import entity.EnemyShip;
 import entity.EnemyShipFormation;
 import entity.Entity;
+import entity.PlayerStatus;
 import entity.Ship;
 import entity.ShipType;
 import audio.AudioManager;
@@ -87,7 +88,7 @@ public class GameScreen extends Screen {
 	/** Current score. */
 	private int score;
 	/** Player lives left. */
-	private int lives;
+	private PlayerStatus playerStatus;
 	/** Total bullets shot by the player. */
 	private int bulletsShot;
 	/** Total ships destroyed by the player. */
@@ -218,9 +219,12 @@ public class GameScreen extends Screen {
 		this.bonusLife = bonusLife;
 		this.level = gameState.getLevel();
 		this.score = gameState.getScore();
-		this.lives = gameState.getLivesRemaining();
+		this.playerStatus = new PlayerStatus(
+				Math.min(gameState.getLivesRemaining(),
+						this.shipType.getMaxLives()),
+				this.shipType.getMaxLives());
 		if (this.bonusLife)
-			this.lives++;
+			this.playerStatus.gainLife();
 		this.bulletsShot = gameState.getBulletsShot();
 		this.shipsDestroyed = gameState.getShipsDestroyed();
 	}
@@ -256,7 +260,7 @@ public class GameScreen extends Screen {
 		this.inputDelay = Core.getCooldown(INPUT_DELAY);
 		this.inputDelay.reset();
 
-        if (this.lives == 1) {
+        if (this.playerStatus.getLives() == 1) {
             AudioManager.playBGM("audio/bgm/music_game_urgent.wav");
             this.isLowHealthBGM = true;
         } else {
@@ -275,7 +279,7 @@ public class GameScreen extends Screen {
 
 		// Life bonus is only awarded when the stage was cleared.
 		if (this.stageCleared)
-			this.score += LIFE_SCORE * (this.lives - 1);
+			this.score += LIFE_SCORE * (this.playerStatus.getLives() - 1);
 		this.logger.info("Screen cleared with a score of " + this.score);
 
 		return this.returnCode;
@@ -398,7 +402,7 @@ public class GameScreen extends Screen {
 		draw();
 
 		if (!this.levelFinished) {
-			if (this.lives == 0) {
+			if (!this.playerStatus.isAlive()) {
 				this.levelFinished = true;
 				this.stageCleared = false;
 				this.screenFinishedCooldown.reset();
@@ -491,7 +495,7 @@ public class GameScreen extends Screen {
 
 		// Interface.
 		drawManager.drawScore(this, this.score);
-		drawManager.drawLives(this, this.lives);
+		drawManager.drawLives(this, this.playerStatus.getLives());
 
 		if (this.level == OrbitalAnnihilator.REQUIRED_LEVEL)
 			drawManager.drawAnnihilatorGauge(
@@ -553,13 +557,15 @@ public class GameScreen extends Screen {
 								this.particleSystem.spawnPlayerExplosion(
 										this.ship.getPositionX() + this.ship.getWidth() / 2,
 										this.ship.getPositionY() + this.ship.getHeight() / 2);
-								this.lives = Math.max(0, this.lives - 1);
+								this.playerStatus.takeDamage(1);
 								this.itemManager.getBuffManager().resetAllBuffs(this.ship);
-                                if (this.lives == 1 && !this.isLowHealthBGM) {
+                                if (this.playerStatus.getLives() == 1 && !this.isLowHealthBGM) {
                                     AudioManager.playBGM("audio/bgm/music_game_urgent.wav");
                                     this.isLowHealthBGM = true;
                                 }
-								this.logger.info("Hit on player ship, " + this.lives + " lives remaining.");
+								this.logger.info("Hit on player ship, "
+										+ this.playerStatus.getLives()
+										+ " lives remaining.");
 							}
 						}
 					}
@@ -691,7 +697,8 @@ public class GameScreen extends Screen {
 	 * @return Current game state.
 	 */
 	public final GameState getGameState() {
-		return new GameState(this.level, this.score, this.lives,
+		return new GameState(this.level, this.score,
+				this.playerStatus.getLives(),
 				this.bulletsShot, this.shipsDestroyed);
 	}
 
@@ -723,7 +730,7 @@ public class GameScreen extends Screen {
 		if (!this.chameleonDroppedThisLevel
 				&& this.level >= ChameleonHull.REQUIRED_LEVEL
 				&& !this.levelFinished
-				&& this.lives > 0
+				&& this.playerStatus.isAlive()
 				&& this.itemDropRandom.nextDouble() < ChameleonHull.DROP_CHANCE) {
 
 			this.itemManager.spawnItem(

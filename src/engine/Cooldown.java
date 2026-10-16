@@ -24,12 +24,12 @@ public class Cooldown {
 	 * @param milliseconds
 	 *            Time until cooldown period is finished.
 	 * @throws IllegalArgumentException
-	 *             If the cooldown duration is not positive.
+	 *             If the cooldown duration is negative.
 	 */
 	protected Cooldown(final int milliseconds) {
-		if (milliseconds <= 0)
+		if (milliseconds < 0)
 			throw new IllegalArgumentException(
-					"Cooldown duration must be positive.");
+					"Cooldown duration must not be negative.");
 		this.milliseconds = milliseconds;
 		this.variance = 0;
 		this.duration = milliseconds;
@@ -45,13 +45,13 @@ public class Cooldown {
 	 * @param variance
 	 *            Maximum variation on either side of the base duration.
 	 * @throws IllegalArgumentException
-	 *             If the duration is not positive, the variance is negative,
+	 *             If the duration is negative, the variance is negative,
 	 *             not less than the duration, or would exceed the integer range.
 	 */
 	protected Cooldown(final int milliseconds, final int variance) {
-		if (milliseconds <= 0)
+		if (milliseconds < 0)
 			throw new IllegalArgumentException(
-					"Cooldown duration must be positive.");
+					"Cooldown duration must not be negative.");
 		if (variance < 0 || variance >= milliseconds
 				|| variance > Integer.MAX_VALUE - milliseconds)
 			throw new IllegalArgumentException(
@@ -82,16 +82,16 @@ public class Cooldown {
 	 * The change is not measured from the time this method is called.
 	 *
 	 * @param milliseconds
-	 *            New positive cooldown duration in milliseconds.
+	 *            New non-negative cooldown duration in milliseconds.
 	 * @throws IllegalArgumentException
-	 *             If the duration is not positive.
+	 *             If the duration is negative.
 	 * @throws IllegalStateException
 	 *             If this cooldown has variable duration.
 	 */
 	public final void setDuration(final int milliseconds) {
-		if (milliseconds <= 0)
+		if (milliseconds < 0)
 			throw new IllegalArgumentException(
-					"Cooldown duration must be positive.");
+					"Cooldown duration must not be negative.");
 		if (this.variance != 0)
 			throw new IllegalStateException(
 					"Cannot change a variable cooldown duration.");
