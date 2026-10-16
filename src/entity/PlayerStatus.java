@@ -66,6 +66,21 @@ public class PlayerStatus {
 	}
 
 	/**
+	 * Grants one life when the player is alive and below the configured maximum.
+	 * A player with no lives cannot be revived; the game-over flow has already
+	 * ended level progression at that point.
+	 *
+	 * @return Whether a life was added.
+	 */
+	public final boolean gainLife() {
+		if (!isAlive() || this.lives >= this.maxLives)
+			return false;
+
+		this.lives++;
+		return true;
+	}
+
+	/**
 	 * Grants a shield, or refreshes the one already active. The player takes
 	 * no damage until it expires.
 	 */
