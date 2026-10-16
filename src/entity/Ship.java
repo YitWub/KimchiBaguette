@@ -14,14 +14,17 @@ import java.util.Set;
  */
 public class Ship extends Entity {
 
-    /** Time between shots. */
-    private static final int SHOOTING_INTERVAL = 400;
+    /** Type of this ship, which supplies its speed, fire rate and lives. */
+    private final ShipType shipType;
+
+    /** Time between shots, taken from the ship type. */
+    private final int shootingInterval;
 
     /** Speed of the bullets shot by the ship. */
     private static final int BULLET_SPEED = -6;
 
-    /** Movement of the ship for each unit of time. */
-    private static final int SPEED = 2;
+    /** Movement of the ship for each unit of time, from the ship type. */
+    private final int speed;
 
     /** Whether the Hyperfire buff is currently enabled. */
     private boolean hyperfireEnabled = false;
@@ -72,8 +75,29 @@ public class Ship extends Entity {
      *            Initial position of the ship in the Y axis.
      */
     public Ship(final int positionX, final int positionY) {
+        this(positionX, positionY, ShipType.STANDARD);
+    }
+
+    /**
+     * Constructor, establishes the ship's properties from a selected type.
+     *
+     * @param positionX
+     *            Initial position of the ship in the X axis.
+     * @param positionY
+     *            Initial position of the ship in the Y axis.
+     * @param shipType
+     *            Selected ship type, source of speed, fire rate and lives.
+     */
+    public Ship(final int positionX, final int positionY,
+            final ShipType shipType) {
         super(positionX, positionY, 13 * 2, 8 * 2, Color.GREEN);
 
+        if (shipType == null)
+            throw new IllegalArgumentException("Ship type cannot be null.");
+
+        this.shipType = shipType;
+        this.speed = shipType.getSpeed();
+        this.shootingInterval = shipType.getShootingInterval();
         this.spriteType = SpriteType.Ship;
         this.destructionCooldown = Core.getCooldown(1000);
         this.damageFeedbackCooldown = Core.getCooldown(DAMAGE_FEEDBACK_DURATION);
@@ -84,7 +108,7 @@ public class Ship extends Entity {
      * reached.
      */
     public final void moveRight() {
-        this.positionX += SPEED;
+        this.positionX += this.speed;
         addChameleonMovement(1);
     }
 
@@ -93,7 +117,7 @@ public class Ship extends Entity {
      * reached.
      */
     public final void moveLeft() {
-        this.positionX -= SPEED;
+        this.positionX -= this.speed;
         addChameleonMovement(-1);
     }
 
@@ -111,14 +135,14 @@ public class Ship extends Entity {
 
         long currentTime = System.currentTimeMillis();
 
-        int shootingInterval = SHOOTING_INTERVAL;
+        int interval = this.shootingInterval;
 
         if (this.hyperfireEnabled) {
-            shootingInterval = (int) (SHOOTING_INTERVAL * 0.40);
+            interval = (int) (this.shootingInterval * 0.40);
         }
 
         if (lastShotTime == 0
-                || currentTime - lastShotTime >= shootingInterval) {
+                || currentTime - lastShotTime >= interval) {
 
             lastShotTime = currentTime;
 
@@ -210,7 +234,16 @@ public class Ship extends Entity {
      * @return Speed of the ship.
      */
     public final int getSpeed() {
-        return SPEED;
+        return this.speed;
+    }
+
+    /**
+     * Getter for the type this ship was created from.
+     *
+     * @return Selected ship type.
+     */
+    public final ShipType getShipType() {
+        return this.shipType;
     }
 
     public boolean isShieldActive() {
@@ -256,7 +289,7 @@ public class Ship extends Entity {
     }
 
     public final double getMovementSpeed() {
-        return SPEED * (
+        return this.speed * (
                 this.chameleonHullActive
                         ? entity.item.ChameleonHull.SPEED_MULTIPLIER
                         : 1.0
@@ -269,7 +302,7 @@ public class Ship extends Entity {
             return;
         }
 
-        this.chameleonMovementRemainder += direction * SPEED
+        this.chameleonMovementRemainder += direction * this.speed
                 * (entity.item.ChameleonHull.SPEED_MULTIPLIER - 1.0);
 
         int extraPixels = (int) (

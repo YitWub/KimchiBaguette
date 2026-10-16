@@ -15,6 +15,8 @@ import screen.InfiniteGameScreen;
 import screen.ScoreScreen;
 import screen.Screen;
 import screen.TitleScreen;
+import entity.ShipType;
+import screen.ShipSelectionScreen;
 import campaign.CampaignStageData;
 import campaign.CampaignManager;
 import screen.SettingsScreen;
@@ -104,17 +106,33 @@ public final class Core {
 				LOGGER.info("Closing title screen.");
 				break;
 			case 2:
+				// Ship selection, before the first stage starts.
+				currentScreen = new ShipSelectionScreen(width, height, FPS);
+				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
+						+ " ship selection screen at " + FPS + " fps.");
+				frame.setScreen(currentScreen);
+				LOGGER.info("Closing ship selection screen.");
+
+				ShipType selectedShip = ((ShipSelectionScreen) currentScreen)
+						.getSelectedShip();
+				LOGGER.info("Selected ship: " + selectedShip.getName());
+
+				// The selected ship decides how many lives the run starts with.
+				gameState = new GameState(1, 0, selectedShip.getMaxLives(),
+						0, 0);
+
 				// Game & score.
 				do {
 					// One extra live every few levels.
 					boolean bonusLife = gameState.getLevel()
 							% EXTRA_LIFE_FRECUENCY == 0
-							&& gameState.getLivesRemaining() < MAX_LIVES;
+							&& gameState.getLivesRemaining()
+									< selectedShip.getMaxLives();
 					
 					currentScreen = new GameScreen(gameState,
 							applyDifficulty(CampaignStageData
 									.getStageSettings(gameState.getLevel())),
-							bonusLife, width, height, FPS);
+							bonusLife, width, height, FPS, selectedShip);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " game screen at " + FPS + " fps.");
 					frame.setScreen(currentScreen);

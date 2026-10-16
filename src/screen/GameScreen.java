@@ -23,6 +23,7 @@ import entity.EnemyShip;
 import entity.EnemyShipFormation;
 import entity.Entity;
 import entity.Ship;
+import entity.ShipType;
 import audio.AudioManager;
 import entity.item.Hyperfire;
 import entity.item.OrbitalAnnihilator;
@@ -57,6 +58,8 @@ public class GameScreen extends Screen {
 	private boolean chameleonDroppedThisLevel = false;
 	private boolean shieldDroppedThisLevel = false;
 
+	/** Player ship type selected before the stage started. */
+	private ShipType shipType;
 	/** Current game difficulty settings. */
 	private GameSettings gameSettings;
 	/** Settings of every wave in this stage, in play order. */
@@ -128,7 +131,33 @@ public class GameScreen extends Screen {
 					  final GameSettings gameSettings, final boolean bonusLife,
 					  final int width, final int height, final int fps) {
 		this(gameState, Collections.singletonList(gameSettings), bonusLife,
-				width, height, fps);
+				width, height, fps, ShipType.STANDARD);
+	}
+
+	/**
+	 * Constructor for a stage played with a selected player ship.
+	 *
+	 * @param gameState
+	 *            Current game state.
+	 * @param gameSettings
+	 *            Current game settings.
+	 * @param bonusLife
+	 *            Checks if a bonus life is awarded this level.
+	 * @param width
+	 *            Screen width.
+	 * @param height
+	 *            Screen height.
+	 * @param fps
+	 *            Frames per second, frame rate at which the game is run.
+	 * @param shipType
+	 *            Selected player ship type.
+	 */
+	public GameScreen(final GameState gameState,
+					  final GameSettings gameSettings, final boolean bonusLife,
+					  final int width, final int height, final int fps,
+					  final ShipType shipType) {
+		this(gameState, Collections.singletonList(gameSettings), bonusLife,
+				width, height, fps, shipType);
 	}
 
 	/**
@@ -150,8 +179,39 @@ public class GameScreen extends Screen {
 	public GameScreen(final GameState gameState,
 					  final List<GameSettings> waves, final boolean bonusLife,
 					  final int width, final int height, final int fps) {
+		this(gameState, waves, bonusLife, width, height, fps,
+				ShipType.STANDARD);
+	}
+
+	/**
+	 * Constructor for a stage with one or more waves, played with a selected
+	 * player ship.
+	 *
+	 * @param gameState
+	 * 			Current game state.
+	 * @param waves
+	 * 			Settings of each wave, in play order.
+	 * @param bonusLife
+	 * 			Checks if a bonus life is awarded this level.
+	 * @param width
+	 * 			Screen width.
+	 * @param height
+	 * 			Screen height.
+	 * @param fps
+	 * 			Frames per second, frame rate at which the game is run.
+	 * @param shipType
+	 * 			Selected player ship type.
+	 */
+	public GameScreen(final GameState gameState,
+					  final List<GameSettings> waves, final boolean bonusLife,
+					  final int width, final int height, final int fps,
+					  final ShipType shipType) {
 		super(width, height, fps);
 
+		if (shipType == null)
+			throw new IllegalArgumentException("Ship type cannot be null.");
+
+		this.shipType = shipType;
 		this.waves = copyWaves(waves);
 		this.currentWave = 0;
 		this.gameSettings = this.waves.get(0);
@@ -173,7 +233,8 @@ public class GameScreen extends Screen {
 
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
-		this.ship = new Ship(this.width / 2, this.height - 30);
+		this.ship = new Ship(this.width / 2, this.height - 30,
+				this.shipType);
 		this.itemManager = new ItemManager(this.height);
 
 		this.shieldDroppedThisLevel = false;
