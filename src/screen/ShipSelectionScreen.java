@@ -77,7 +77,7 @@ public class ShipSelectionScreen extends Screen {
     private void draw() {
         drawManager.initDrawing(this);
 
-        drawManager.drawShipSelection(this, this.selectedIndex, this.shipTypes);
+        drawManager.drawShipSelection(this, this.shipTypes, this.selectedIndex);
 
         drawManager.completeDrawing(this);
     }

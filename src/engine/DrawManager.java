@@ -1,5 +1,6 @@
 package engine;
 
+import entity.ShipType;
 import entity.item.ChameleonHull;
 
 import java.awt.Color;
@@ -945,29 +946,37 @@ public final class DrawManager {
 	 * @param shipTypes
 	 *            Ships available for selection, in display order.
 	 */
-	public void drawShipSelection(final Screen screen, final int selectedIndex,
-			final entity.ShipType[] shipTypes) {
-		backBufferGraphics.setColor(Color.GREEN);
-		drawCenteredBigString(screen, "SELECT SHIP", screen.getHeight() / 5);
+    public void drawShipSelection(final Screen screen, final ShipType[] shipTypes,
+                                  final int selectedIndex) {
+        String titleString = "SELECT SHIP";
+        String instructionsString = "PRESS SPACE TO LAUNCH";
 
-		for (int i = 0; i < shipTypes.length; i++) {
-			boolean isSelected = i == selectedIndex;
-			entity.ShipType type = shipTypes[i];
+        backBufferGraphics.setColor(Color.GREEN);
+        drawCenteredRegularString(screen, titleString, screen.getHeight() / 6);
 
-			backBufferGraphics.setColor(isSelected ? Color.GREEN : Color.WHITE);
+        int startY = screen.getHeight() / 3;
+        int spacing = 85;
 
-			String title = (isSelected ? "> " : "  ") + type.getName();
-			String stats = "  Speed: " + type.getSpeed()
-					+ " | HP: " + type.getMaxLives();
+        for (int i = 0; i < shipTypes.length; i++) {
+            ShipType type = shipTypes[i];
+            boolean isSelected = (i == selectedIndex);
 
-			drawCenteredRegularString(screen, title,
-					screen.getHeight() / 2 - 30 + i * 50);
-			drawCenteredRegularString(screen, stats,
-					screen.getHeight() / 2 - 10 + i * 50);
-		}
+            if (isSelected) {
+                entity.Ship previewShip = new entity.Ship(screen.getWidth() / 2 - 13,
+                        startY + i * spacing - 40, type);
+                drawEntity(previewShip, screen.getWidth() / 2 - 13, startY + i * spacing - 40);
+            }
 
-		backBufferGraphics.setColor(Color.GRAY);
-		drawCenteredRegularString(screen, "Press SPACE to launch",
-				screen.getHeight() * 9 / 10);
-	}
+            String name = (isSelected ? "> " : "") + type.getName() + (isSelected ? " <" : "");
+            String stats = String.format("SPEED: %d | HP: %d | RELOAD: %dMS",
+                    type.getSpeed(), type.getMaxLives(), type.getShootingInterval());
+
+            backBufferGraphics.setColor(isSelected ? Color.GREEN : Color.GRAY);
+            drawCenteredRegularString(screen, name, startY + i * spacing);
+            drawCenteredRegularString(screen, stats, startY + i * spacing + 20);
+        }
+
+        backBufferGraphics.setColor(Color.GRAY);
+        drawCenteredRegularString(screen, instructionsString, screen.getHeight() - 60);
+    }
 }
