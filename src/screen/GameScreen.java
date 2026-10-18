@@ -21,6 +21,7 @@ import boss.BossManager;
 import boss.BossSpawnRequest;
 import boss.BossStatus;
 import boss.LoggingBossEventListener;
+import entity.BonusEnemyManager;
 import entity.Boss;
 import entity.BossBullet;
 import entity.BulletPool;
@@ -60,12 +61,6 @@ public class GameScreen extends Screen {
 	private static final int INPUT_DELAY = 6000;
 	/** Bonus score for each life remaining at the end of the level. */
 	private static final int LIFE_SCORE = 100;
-	/** Minimum time between bonus ship's appearances. */
-	private static final int BONUS_SHIP_INTERVAL = 20000;
-	/** Maximum variance in the time between bonus ship's appearances. */
-	private static final int BONUS_SHIP_VARIANCE = 10000;
-	/** Time until bonus ship explosion disappears. */
-	private static final int BONUS_SHIP_EXPLOSION = 500;
 	/** Time from finishing the level to screen change. */
 	private static final int SCREEN_CHANGE_INTERVAL = 1500;
 	/**
@@ -115,11 +110,7 @@ public class GameScreen extends Screen {
 	/** Player's ship. */
 	private Ship ship;
 	/** Bonus enemy ship that appears sometimes. */
-	private EnemyShip enemyShipSpecial;
-	/** Minimum time between bonus ship appearances. */
-	private Cooldown enemyShipSpecialCooldown;
-	/** Time until bonus ship explosion disappears. */
-	private Cooldown enemyShipSpecialExplosionCooldown;
+	private BonusEnemyManager bonusEnemyManager;
 	/** Time from finishing the level to screen change. */
 	private Cooldown screenFinishedCooldown;
 	/** Set of all bullets fired by on screen ships. */
@@ -374,12 +365,7 @@ public class GameScreen extends Screen {
 		this.chameleonDroppedThisLevel = false;
 		this.hyperfireKeyPressed = false;
 
-		// Appears each 10-30 seconds.
-		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
-				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
-		this.enemyShipSpecialCooldown.reset();
-		this.enemyShipSpecialExplosionCooldown = Core
-				.getCooldown(BONUS_SHIP_EXPLOSION);
+		this.bonusEnemyManager = new BonusEnemyManager();
 		this.screenFinishedCooldown = Core.getCooldown(SCREEN_CHANGE_INTERVAL);
 		this.bullets = new HashSet<Bullet>();
 		this.annihilator = new OrbitalAnnihilator();
@@ -534,23 +520,7 @@ public class GameScreen extends Screen {
 				this.spaceHeldSince = 0;
 			}
 
-			if (this.enemyShipSpecial != null) {
-				if (!this.enemyShipSpecial.isDestroyed())
-					this.enemyShipSpecial.move(2, 0);
-				else if (this.enemyShipSpecialExplosionCooldown.checkFinished())
-					this.enemyShipSpecial = null;
-			}
-			if (this.enemyShipSpecial == null
-					&& this.enemyShipSpecialCooldown.checkFinished()) {
-				this.enemyShipSpecial = new EnemyShip();
-				this.enemyShipSpecialCooldown.reset();
-				this.logger.info("A special ship appears");
-			}
-			if (this.enemyShipSpecial != null
-					&& this.enemyShipSpecial.getPositionX() > this.width) {
-				this.enemyShipSpecial = null;
-				this.logger.info("The special ship has escaped");
-			}
+			this.bonusEnemyManager.update(this.width);
 
 			Boss boss = getBossOnScreen();
 			if (boss != null) {
@@ -675,10 +645,10 @@ public class GameScreen extends Screen {
 			drawManager.drawShield(this, this.ship);
 		}
 
-		if (this.enemyShipSpecial != null)
-			drawManager.drawEntity(this.enemyShipSpecial,
-					this.enemyShipSpecial.getPositionX(),
-					this.enemyShipSpecial.getPositionY());
+		EnemyShip bonusShip = this.bonusEnemyManager.getShip();
+		if (bonusShip != null)
+			drawManager.drawEntity(bonusShip, bonusShip.getPositionX(),
+					bonusShip.getPositionY());
 
 		Boss boss = getBossOnScreen();
 		if (boss != null)
@@ -818,18 +788,16 @@ public class GameScreen extends Screen {
 							}
 						}
 					}
-				if (this.enemyShipSpecial != null
-						&& !this.enemyShipSpecial.isDestroyed()
-						&& checkCollision(bullet, this.enemyShipSpecial)) {
-					this.score += this.enemyShipSpecial.getPointValue();
+				EnemyShip bonusShip = this.bonusEnemyManager.getShip();
+				if (this.bonusEnemyManager.isActive()
+						&& checkCollision(bullet, bonusShip)) {
+					recordEnemyDefeat(bonusShip);
+					this.score += this.bonusEnemyManager.destroy();
 					this.shipsDestroyed++;
-					recordEnemyDefeat(this.enemyShipSpecial);
-					this.enemyShipSpecial.destroy();
 					this.particleSystem.spawnEnemyExplosion(
-							this.enemyShipSpecial.getPositionX() + this.enemyShipSpecial.getWidth() / 2,
-							this.enemyShipSpecial.getPositionY() + this.enemyShipSpecial.getHeight() / 2);
-					tryDropChameleonHull(this.enemyShipSpecial);
-					this.enemyShipSpecialExplosionCooldown.reset();
+							bonusShip.getPositionX() + bonusShip.getWidth() / 2,
+							bonusShip.getPositionY() + bonusShip.getHeight() / 2);
+					tryDropChameleonHull(bonusShip);
 					recyclable.add(bullet);
 				}
 				// A bullet that already hit a ship cannot also hit the boss.
@@ -876,17 +844,13 @@ public class GameScreen extends Screen {
 				tryDropChameleonHull(enemyShip);
 			}
 
-		if (this.enemyShipSpecial != null
-				&& !this.enemyShipSpecial.isDestroyed()
-				&& OrbitalAnnihilator.hits(this.ship, this.enemyShipSpecial)) {
-			this.score += this.enemyShipSpecial.getPointValue();
+		EnemyShip bonusShip = this.bonusEnemyManager.getShip();
+		if (this.bonusEnemyManager.isActive()
+				&& OrbitalAnnihilator.hits(this.ship, bonusShip)) {
+			recordEnemyDefeat(bonusShip);
+			this.score += this.bonusEnemyManager.destroy();
 			this.shipsDestroyed++;
-			recordEnemyDefeat(this.enemyShipSpecial);
-
-			this.enemyShipSpecial.destroy();
-			tryDropChameleonHull(this.enemyShipSpecial);
-
-			this.enemyShipSpecialExplosionCooldown.reset();
+			tryDropChameleonHull(bonusShip);
 		}
 
 		Set<Bullet> neutralized = new HashSet<Bullet>();
@@ -1162,17 +1126,13 @@ public class GameScreen extends Screen {
 			}
 		}
 
-		if (this.enemyShipSpecial != null
-				&& !this.enemyShipSpecial.isDestroyed()
-				&& checkCollision(this.ship, this.enemyShipSpecial)) {
-			this.score += this.enemyShipSpecial.getPointValue();
+		EnemyShip bonusShip = this.bonusEnemyManager.getShip();
+		if (this.bonusEnemyManager.isActive()
+				&& checkCollision(this.ship, bonusShip)) {
+			recordEnemyDefeat(bonusShip);
+			this.score += this.bonusEnemyManager.destroy();
 			this.shipsDestroyed++;
-			recordEnemyDefeat(this.enemyShipSpecial);
-
-			this.enemyShipSpecial.destroy();
-			this.enemyShipSpecialExplosionCooldown.reset();
-
-			tryDropChameleonHull(this.enemyShipSpecial);
+			tryDropChameleonHull(bonusShip);
 		}
 	}
 }
