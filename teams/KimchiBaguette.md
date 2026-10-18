@@ -23,9 +23,11 @@ We are developing the **Player & Enemy Ship Variety** system of the Space Invade
 ## Detailed Requirements
 The five requirements below are the scope our team commits to for the initial
 implementation. The figures are the values fixed in our code, and each requirement
-states the condition under which we treat it as complete. This project has no
-automated test suite, so every completion condition is written so that it can be
-checked by building and running `engine.Core` by hand.
+states the condition under which we treat it as complete. The project has test
+classes under `tests/`, but they are plain `main` methods run by hand rather than
+a JUnit suite on CI, and they cover calculations rather than whole systems. Every
+completion condition is therefore written so that it can also be checked by
+building and running `engine.Core`.
 
 **R1. Selectable player ships with distinct stats.**
 Three ships are selectable before the game starts: Standard (speed 2, 750 ms between
@@ -57,11 +59,12 @@ pattern changes as the boss loses HP, and a defeated boss stops moving and attac
 and does not respawn.
 
 **R5. Bonus and penalty elements.**
-Bonus elements: a 3-second shield that absorbs one hit, and an extra life. Penalty
-element: an obstacle that blocks player movement or fire.
-*Complete when* each element can be obtained or encountered in play, the shield expires
-on its own after 3 seconds, and the penalty element has an effect the player can
-observe without reading the log.
+Bonus elements: a shield that absorbs all damage for 3 seconds, and an extra life.
+Penalty element: an obstacle that blocks player movement or fire.
+*Complete when* each element can be obtained or encountered in play, the shield blocks
+every hit taken while it is up and expires on its own after 3 seconds rather than on
+the first hit, and the penalty element has an effect the player can observe without
+reading the log.
 
 ## Dependencies on Other Teams
 The items below are the support our own requirements depend on, and that we therefore
