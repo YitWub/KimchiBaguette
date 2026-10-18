@@ -7,9 +7,9 @@ import java.util.List;
  * Manages the player's discrete lives and damage processing. The current game
  * does not model a separate health pool; one accepted hit consumes one life.
  *
- * A timed shield can absorb incoming damage. It is held here rather than on
- * {@link Ship} so that every damage source goes through one check, and so the
- * Gameplay HUD can read its remaining time without touching the ship.
+ * A timed shield can absorb incoming damage, and a timed slow can affect ship
+ * movement. These statuses are held here so damage and effect timing have one
+ * owner and the Gameplay HUD can read their remaining time.
  *
  * Every change is announced to the registered
  * {@link PlayerStatusListener}s, so the Gameplay HUD and Visual Effect
@@ -19,6 +19,20 @@ public class PlayerStatus {
 
 	/** Duration of a shield, in milliseconds. */
 	private static final int SHIELD_DURATION = 3000;
+	/** Duration of the slow debuff, in milliseconds. */
+	private static final int SLOW_DURATION = 2000;
+
+	/** Result of an attempt to apply the slow debuff. */
+	public enum SlowApplicationResult {
+		/** A new slow debuff was applied. */
+		STARTED,
+		/** The active slow debuff's duration was restarted. */
+		REFRESHED,
+		/** The active shield prevented the slow debuff. */
+		BLOCKED_BY_SHIELD,
+		/** The player has no remaining lives. */
+		PLAYER_DEAD
+	}
 
 	/** Current number of lives. */
 	private int lives;
@@ -37,6 +51,18 @@ public class PlayerStatus {
 	 * since nothing counts the shield down frame by frame.
 	 */
 	private boolean shieldAnnounced;
+	/** Point in time the current slow debuff expires. */
+	private long slowExpiryTime;
+	/** Ship whose movement is currently affected by the slow debuff. */
+	private Ship slowedShip;
+	/** Whether the ship's current speed was following its base speed. */
+	private boolean slowFollowsBaseSpeed;
+	/** Last base speed observed while the slow debuff was active. */
+	private int slowTrackedBaseSpeed;
+	/** Last current speed observed while the slow debuff was active. */
+	private int slowTrackedCurrentSpeed;
+	/** Last explicit base-stat restore observed for the slowed ship. */
+	private long slowTrackedBaseStatsRestoreVersion;
 	/** Listeners from the other systems. */
 	private final List<PlayerStatusListener> listeners =
 			new ArrayList<PlayerStatusListener>();
@@ -97,13 +123,133 @@ public class PlayerStatus {
 	}
 
 	/**
-	 * Reports a shield that has run out. The shield is held as an expiry time
-	 * rather than counted down frame by frame, so something has to look at
-	 * the clock for its end to be announced; {@link screen.GameScreen} calls
-	 * this once per frame.
+	 * Updates timed player effects. The shield is held as an expiry time rather
+	 * than counted down frame by frame, so something has to look at the clock
+	 * for its end to be announced; {@link screen.GameScreen} calls this once per
+	 * frame.
 	 */
 	public final void update() {
 		announceExpiredShield();
+		updateSlowDebuff();
+	}
+
+	/**
+	 * Applies or refreshes a two-second, 50-percent movement slow. An active
+	 * shield blocks a new slow and also clears an existing one on the next
+	 * status update. This API reports the result directly; it does not change
+	 * the shared B6 event contract.
+	 *
+	 * @param ship
+	 *            Player ship to affect.
+	 * @return Whether the effect started, refreshed, or was blocked.
+	 * @throws IllegalArgumentException
+	 *             If {@code ship} is {@code null}.
+	 */
+	public final SlowApplicationResult applySlow(final Ship ship) {
+		if (ship == null)
+			throw new IllegalArgumentException("Ship cannot be null.");
+
+		announceExpiredShield();
+		updateSlowDebuff();
+		if (!isAlive())
+			return SlowApplicationResult.PLAYER_DEAD;
+		if (isShieldActive())
+			return SlowApplicationResult.BLOCKED_BY_SHIELD;
+
+		boolean refreshed = isSlowActive() && this.slowedShip == ship;
+		if (this.slowedShip != null && this.slowedShip != ship)
+			endSlowDebuff();
+		if (!refreshed) {
+			this.slowedShip = ship;
+			this.slowTrackedBaseSpeed = ship.getBaseSpeed();
+			this.slowTrackedCurrentSpeed = ship.getSpeed();
+			this.slowTrackedBaseStatsRestoreVersion =
+					ship.getBaseStatsRestoreVersion();
+			this.slowFollowsBaseSpeed =
+					ship.getSpeed() == this.slowTrackedBaseSpeed;
+			ship.setSlowDebuffActive(true);
+		}
+		this.slowExpiryTime = currentTimeMillis() + SLOW_DURATION;
+		return refreshed ? SlowApplicationResult.REFRESHED
+				: SlowApplicationResult.STARTED;
+	}
+
+	/** @return Whether the slow debuff is currently active. */
+	public final boolean isSlowActive() {
+		updateSlowDebuff();
+		return this.slowedShip != null;
+	}
+
+	/**
+	 * Reports how much slow duration is left.
+	 *
+	 * @return Milliseconds remaining, or zero when inactive.
+	 */
+	public final int getSlowRemainingMillis() {
+		updateSlowDebuff();
+		long remaining = this.slowExpiryTime - currentTimeMillis();
+		return this.slowedShip != null && remaining > 0
+				? (int) remaining : 0;
+	}
+
+	/** @return Full duration of the slow debuff, in milliseconds. */
+	public static int getSlowDuration() {
+		return SLOW_DURATION;
+	}
+
+	/** Synchronizes slow state with life, shield, base speed, and expiry. */
+	private void updateSlowDebuff() {
+		if (this.slowedShip == null)
+			return;
+
+		if (!isAlive() || isShieldActive()) {
+			endSlowDebuff();
+			return;
+		}
+
+		if (this.slowedShip.getBaseStatsRestoreVersion()
+				!= this.slowTrackedBaseStatsRestoreVersion) {
+			this.slowTrackedBaseStatsRestoreVersion =
+					this.slowedShip.getBaseStatsRestoreVersion();
+			this.slowTrackedBaseSpeed = this.slowedShip.getBaseSpeed();
+			this.slowTrackedCurrentSpeed = this.slowedShip.getSpeed();
+			this.slowFollowsBaseSpeed = true;
+			this.slowedShip.resetSlowMovementRemainders();
+		} else if (this.slowFollowsBaseSpeed) {
+			if (this.slowedShip.getSpeed()
+					!= this.slowTrackedCurrentSpeed) {
+				// A separate current-stat change takes precedence over the base.
+				this.slowFollowsBaseSpeed = false;
+				this.slowTrackedCurrentSpeed = this.slowedShip.getSpeed();
+				this.slowedShip.resetSlowMovementRemainders();
+			} else if (this.slowedShip.getBaseSpeed()
+					!= this.slowTrackedBaseSpeed) {
+				this.slowTrackedBaseSpeed = this.slowedShip.getBaseSpeed();
+				this.slowedShip.setSpeed(this.slowTrackedBaseSpeed);
+				this.slowTrackedCurrentSpeed = this.slowTrackedBaseSpeed;
+				this.slowedShip.resetSlowMovementRemainders();
+			}
+		} else if (this.slowedShip.getSpeed()
+				!= this.slowTrackedCurrentSpeed) {
+			this.slowTrackedCurrentSpeed = this.slowedShip.getSpeed();
+			this.slowedShip.resetSlowMovementRemainders();
+		}
+
+		if (currentTimeMillis() >= this.slowExpiryTime)
+			endSlowDebuff();
+	}
+
+	/** Ends the movement-only modifier without touching the firing interval. */
+	private void endSlowDebuff() {
+		if (this.slowedShip != null) {
+			if (this.slowFollowsBaseSpeed
+					&& this.slowedShip.getSpeed() == this.slowTrackedBaseSpeed)
+				this.slowedShip.setSpeed(this.slowedShip.getBaseSpeed());
+			this.slowedShip.setSlowDebuffActive(false);
+		}
+		this.slowedShip = null;
+		this.slowExpiryTime = 0;
+		this.slowFollowsBaseSpeed = false;
 	}
 
 	/**

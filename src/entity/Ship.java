@@ -41,6 +41,9 @@ public class Ship extends Entity {
     /** Baseline movement speed, before any buff changes it. */
     private int baseSpeed;
 
+    /** Number of times the current stats have explicitly been restored. */
+    private long baseStatsRestoreVersion;
+
     /** Whether the Hyperfire buff is currently enabled. */
     private boolean hyperfireEnabled = false;
 
@@ -64,6 +67,11 @@ public class Ship extends Entity {
     private long chameleonActivationTime;
     private Color colorBeforeChameleon;
     private double chameleonMovementRemainder;
+
+    /** Whether the player-status slow debuff is affecting ship movement. */
+    private boolean slowDebuffActive;
+    /** Fractional slow movement retained independently for each direction. */
+    private final double[] slowMovementRemainders = new double[4];
 
     private int widthBeforeChameleon;
     private int heightBeforeChameleon;
@@ -127,6 +135,10 @@ public class Ship extends Entity {
      * reached.
      */
     public final void moveRight() {
+        if (this.slowDebuffActive) {
+            this.positionX += getSlowedMovementPixels(0);
+            return;
+        }
         this.positionX += this.speed;
         addChameleonMovement(1);
     }
@@ -136,8 +148,41 @@ public class Ship extends Entity {
      * reached.
      */
     public final void moveLeft() {
+        if (this.slowDebuffActive) {
+            this.positionX -= getSlowedMovementPixels(1);
+            return;
+        }
         this.positionX -= this.speed;
         addChameleonMovement(-1);
+    }
+
+    /** Enables or disables the PlayerStatus-owned slow movement modifier. */
+    final void setSlowDebuffActive(final boolean active) {
+        if (this.slowDebuffActive != active)
+            resetSlowMovementRemainders();
+        this.slowDebuffActive = active;
+    }
+
+    /** Clears fractional movement after the effective speed changes. */
+    final void resetSlowMovementRemainders() {
+        for (int i = 0; i < this.slowMovementRemainders.length; i++)
+            this.slowMovementRemainders[i] = 0;
+    }
+
+    /**
+     * Applies half of the current movement distance while retaining fractional
+     * pixels per direction. Separate remainders prevent a direction change
+     * from converting a fraction in one direction into movement in the other.
+     *
+     * @param direction Direction slot, kept separate to avoid cross-direction carry.
+     * @return Whole pixels to move in this update.
+     */
+    private int getSlowedMovementPixels(final int direction) {
+        double movement = getMovementSpeed() * 0.5
+                + this.slowMovementRemainders[direction];
+        int wholePixels = (int) Math.floor(movement + 1e-9);
+        this.slowMovementRemainders[direction] = movement - wholePixels;
+        return wholePixels;
     }
 
     /**
@@ -413,6 +458,12 @@ public class Ship extends Entity {
     public final void restoreBaseStats() {
         this.speed = this.baseSpeed;
         setShootingInterval(this.baseShootingInterval);
+        this.baseStatsRestoreVersion++;
+    }
+
+    /** @return Version used internally to detect an explicit base-stat restore. */
+    final long getBaseStatsRestoreVersion() {
+        return this.baseStatsRestoreVersion;
     }
 
     public boolean isShieldActive() {
@@ -486,13 +537,19 @@ public class Ship extends Entity {
 
     public final void moveUp() {
         if (this.chameleonHullActive && !isDestroyed()) {
-            this.positionY -= (int) getMovementSpeed();
+            if (this.slowDebuffActive)
+                this.positionY -= getSlowedMovementPixels(2);
+            else
+                this.positionY -= (int) getMovementSpeed();
         }
     }
 
     public final void moveDown() {
         if (this.chameleonHullActive && !isDestroyed()) {
-            this.positionY += (int) getMovementSpeed();
+            if (this.slowDebuffActive)
+                this.positionY += getSlowedMovementPixels(3);
+            else
+                this.positionY += (int) getMovementSpeed();
         }
     }
 
