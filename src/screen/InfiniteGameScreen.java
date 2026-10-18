@@ -10,6 +10,16 @@ import java.util.Set;
 import vfx.ParticleSystem;
 
 import audio.AudioManager;
+import records.RunSession;
+import records.Achievement;
+import records.RecordsService;
+import event.EnemyDefeatedEvent;
+import event.GameplayEventListener;
+import event.GameplayEventPublisher;
+import java.util.Map;
+import java.util.IdentityHashMap;
+import java.util.UUID;
+
 import engine.Cooldown;
 import engine.ControlsConfig;
 import engine.Core;
@@ -74,6 +84,13 @@ public class InfiniteGameScreen extends Screen {
 	private int shipsDestroyed;
 	/** Checks if the game is over. */
 	private boolean gameOver;
+    private RunSession runSession;
+    private boolean abandoned;
+    private RecordsService recordsService;
+    private Achievement visibleAchievement;
+    private long achievementNoticeUntil;
+    private final GameplayEventPublisher recordsEvents = new GameplayEventPublisher();
+    private final Map<Entity,String> defeatIds = new IdentityHashMap<Entity,String>();
 	/** Explosion particles. */
 	private ParticleSystem particleSystem;
 	/** Moment the starting countdown begins. */
@@ -95,7 +112,21 @@ public class InfiniteGameScreen extends Screen {
 	 */
 	public InfiniteGameScreen(final GameState gameState, final int width,
 			final int height, final int fps) {
-		super(width, height, fps);
+		this(gameState, width, height, fps, null);
+    }
+
+    public InfiniteGameScreen(final GameState gameState, final int width,
+            final int height, final int fps, final RunSession runSession) {
+        super(width, height, fps);
+        this.runSession = runSession;
+        this.recordsService = Core.getRecordsService();
+        this.recordsEvents.subscribe(EnemyDefeatedEvent.class,
+                new GameplayEventListener<EnemyDefeatedEvent>() {
+            public void onEvent(final EnemyDefeatedEvent event) {
+                if (recordsService != null)
+                    recordsService.enemyDefeated(event.getRunId(), event.getEventId());
+            }
+        });
 
 		this.score = gameState.getScore();
 		this.lives = gameState.getLivesRemaining();
@@ -131,7 +162,8 @@ public class InfiniteGameScreen extends Screen {
 	 * @return Next screen code.
 	 */
 	public final int run() {
-		super.run();
+		try { super.run(); }
+        finally { if (runSession != null) runSession.stopActiveSegment(System.nanoTime()); }
 
 		this.logger.info("Infinite mode ended with a score of " + this.score);
 
@@ -143,10 +175,23 @@ public class InfiniteGameScreen extends Screen {
 	 */
 	protected final void update() {
 		super.update();
+        if (this.recordsService != null) {
+            long now = System.currentTimeMillis();
+            if (this.visibleAchievement == null || now >= this.achievementNoticeUntil) {
+                this.visibleAchievement = this.recordsService.pollNotification();
+                this.achievementNoticeUntil = this.visibleAchievement == null ? 0 : now + 3000;
+            }
+        }
 
 		if (this.inputDelay.checkFinished() && !this.gameOver) {
+            if (runSession != null) runSession.startActiveSegment(System.nanoTime());
+            if (runSession != null && recordsService != null)
+                recordsService.activeDuration(runSession.getRunId(), runSession.getActiveDurationMillis(System.nanoTime()));
 			if (inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
-				// Quits the run, the score so far is kept.
+				// Preserve the upstream result screen, but an abandoned run is not a completed record.
+                this.abandoned = true;
+                if (recordsService != null && runSession != null) recordsService.abandonRun(runSession.getRunId());
+                if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
 				this.isRunning = false;
 				return;
 			}
@@ -166,6 +211,7 @@ public class InfiniteGameScreen extends Screen {
 
 		if (this.lives == 0 && !this.gameOver) {
 			this.gameOver = true;
+            if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
 			this.screenFinishedCooldown.reset();
 		}
 
@@ -284,6 +330,8 @@ public class InfiniteGameScreen extends Screen {
 		drawManager.drawLives(this, this.lives);
 		drawManager.drawHorizontalLine(this, SEPARATION_LINE_HEIGHT - 1);
 
+        if (this.visibleAchievement != null)
+            drawManager.drawAchievementNotice(this, this.visibleAchievement);
 		drawManager.drawParticles(this.particleSystem);
 
 		if (!this.inputDelay.checkFinished()) {
@@ -344,6 +392,7 @@ public class InfiniteGameScreen extends Screen {
 	 * Manages collisions between bullets, enemies and the player's ship.
 	 */
 	private void manageCollisions() {
+        if (this.gameOver) return;
 		Set<Bullet> recyclable = new HashSet<Bullet>();
 
 		for (Bullet bullet : this.bullets) {
@@ -353,6 +402,7 @@ public class InfiniteGameScreen extends Screen {
 				if (checkCollision(bullet, enemy)) {
 					this.score += enemy.getPointValue();
 					this.shipsDestroyed++;
+                    recordEnemyDefeat(enemy);
 					this.particleSystem.spawnEnemyExplosion(
 							enemy.getPositionX() + enemy.getWidth() / 2,
 							enemy.getPositionY() + enemy.getHeight() / 2);
@@ -443,8 +493,21 @@ public class InfiniteGameScreen extends Screen {
 	 *
 	 * @return Current game state.
 	 */
+    public boolean isAbandoned() { return this.abandoned; }
+
 	public final GameState getGameState() {
 		return new GameState(1, this.score, this.lives, this.bulletsShot,
 				this.shipsDestroyed);
 	}
+    private void recordEnemyDefeat(final Entity enemy) {
+        if (this.runSession == null) return;
+        String id = this.defeatIds.get(enemy);
+        if (id == null) { id=UUID.randomUUID().toString(); this.defeatIds.put(enemy,id); }
+        this.recordsEvents.publish(new EnemyDefeatedEvent(this.runSession.getRunId(),id));
+    }
+
+    public GameplayEventPublisher getGameplayEvents() { return this.recordsEvents; }
+
+    public String getActiveRunId() { return this.runSession == null ? null : this.runSession.getRunId(); }
+
 }

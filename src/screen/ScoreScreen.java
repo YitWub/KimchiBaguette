@@ -11,6 +11,8 @@ import engine.Core;
 import engine.GameState;
 import engine.Score;
 import audio.AudioManager;
+import records.Achievement;
+import java.util.ArrayList;
 
 /**
  * Implements the score screen.
@@ -33,6 +35,7 @@ public class ScoreScreen extends Screen {
 	private int level;
 	/** Checks if the last stage was failed (no lives left). */
 	private boolean stageFailed;
+    private final List<Achievement> runUnlocks;
   /** Checks if every campaign stage was cleared. */
   private boolean gameCleared;
 	/** Checks if the game that just ended was the infinite mode. */
@@ -68,34 +71,27 @@ public class ScoreScreen extends Screen {
 	 * @param gameState
 	 *            Current game state.
 	 */
-	public ScoreScreen(final int width, final int height, final int fps,
-			final GameState gameState) {
-		this(width, height, fps, gameState, false);
-	}
-
-	/**
-	 * Constructor, establishes the properties of the screen.
-	 *
-	 * @param width
-	 *            Screen width.
-	 * @param height
-	 *            Screen height.
-	 * @param fps
-	 *            Frames per second, frame rate at which the game is run.
-	 * @param gameState
-	 *            Current game state.
-	 * @param infiniteMode
-	 *            If the game that just ended was the infinite mode.
-	 */
-	public ScoreScreen(final int width, final int height, final int fps,
-			final GameState gameState, final boolean infiniteMode) {
-		super(width, height, fps);
+    public ScoreScreen(final int width, final int height, final int fps, final GameState state) {
+        this(width,height,fps,state,false,Collections.<Achievement>emptyList());
+    }
+    public ScoreScreen(final int width, final int height, final int fps,
+            final GameState state, final boolean infiniteMode) {
+        this(width,height,fps,state,infiniteMode,Collections.<Achievement>emptyList());
+    }
+    public ScoreScreen(final int width, final int height, final int fps,
+            final GameState state, final List<Achievement> unlocks) {
+        this(width,height,fps,state,false,unlocks);
+    }
+    public ScoreScreen(final int width, final int height, final int fps,
+            final GameState gameState, final boolean infiniteMode, final List<Achievement> unlocks) {
+        super(width,height,fps);
+        this.runUnlocks = new ArrayList<Achievement>(unlocks);
 
 		this.infiniteMode = infiniteMode;
 
 		this.level = gameState.getLevel();
 		this.stageFailed = gameState.getLivesRemaining() == 0;
-        this.gameCleared = !this.stageFailed
+        this.gameCleared = !this.infiniteMode && !this.stageFailed
                 && gameState.getLevel() > CampaignStageData.getTotalStages();
 		this.score = gameState.getScore();
 		this.livesRemaining = gameState.getLivesRemaining();
@@ -218,14 +214,19 @@ public class ScoreScreen extends Screen {
 	 */
 	private void draw() {
 		drawManager.initDrawing(this);
+        float accuracy = this.bulletsShot == 0 ? 1f : (float)this.shipsDestroyed / this.bulletsShot;
+        if (!this.runUnlocks.isEmpty()) {
+            drawManager.drawAchievementResults(this,this.score,this.livesRemaining,
+                    this.shipsDestroyed,accuracy,this.isNewRecord,this.name,this.nameCharSelected,
+                    this.runUnlocks,this.inputDelay.checkFinished(),
+                    this.stageFailed && !this.infiniteMode ? this.level : 0, this.gameCleared);
+            drawManager.completeDrawing(this); return;
+        }
 
 		drawManager.drawGameOver(this, this.inputDelay.checkFinished(),
 				this.isNewRecord,this.gameCleared);
 		if (this.stageFailed && !this.infiniteMode)
 			drawManager.drawStageFailed(this, this.level, this.isNewRecord);
-    // No shots fired means no misses: show 100% instead of NaN (0 / 0).
-    float accuracy = this.bulletsShot == 0 ? 1f
-        : (float) this.shipsDestroyed / this.bulletsShot;
 		drawManager.drawResults(this, this.score, this.livesRemaining,
 				this.shipsDestroyed, accuracy, this.isNewRecord);
 

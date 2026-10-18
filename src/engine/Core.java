@@ -7,6 +7,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import currency.PlayerAssets;
+import java.util.UUID;
+import records.RunSession;
+import records.RunRecord;
+import records.RunRecordFormatter;
+import records.RecordsService;
 import audio.AudioControls;
 import screen.AudioControlScreen;
 import screen.GameScreen;
@@ -17,6 +22,7 @@ import screen.Screen;
 import screen.TitleScreen;
 import entity.ShipType;
 import screen.ShipSelectionScreen;
+import screen.PlayerRecordsScreen;
 import campaign.CampaignStageData;
 import campaign.CampaignManager;
 import screen.SettingsScreen;
@@ -25,9 +31,9 @@ import screen.GameplaySettingsScreen;
 
 /**
  * Implements core game logic.
- * 
+ *
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
- * 
+ *
  */
 public final class Core {
 
@@ -42,13 +48,14 @@ public final class Core {
 	private static final int MAX_LIVES = 3;
 	/** Levels between extra life. */
 	private static final int EXTRA_LIFE_FRECUENCY = 3;
-	
+
 	/** Frame to draw the screen on. */
 	private static Frame frame;
 	/** Screen currently shown. */
 	private static Screen currentScreen;
 	/** Player assets shared across levels and new games in this session. */
 	private static PlayerAssets playerAssets;
+	private static RecordsService recordsService;
 	/** Application logger. */
 	private static final Logger LOGGER = Logger.getLogger(Core.class
 			.getSimpleName());
@@ -60,7 +67,7 @@ public final class Core {
 
 	/**
 	 * Test implementation.
-	 * 
+	 *
 	 * @param args
 	 *            Program args, ignored.
 	 */
@@ -90,6 +97,11 @@ public final class Core {
 		int height = frame.getHeight();
 
 		playerAssets = new PlayerAssets();
+		recordsService = new RecordsService(new java.io.File(System.getProperty("user.home"),
+                ".space-invaders/records-achievements.properties").toPath());
+        registerRecordsShutdownHook(recordsService);
+        if (recordsService.getSaveError() != null) LOGGER.warning(recordsService.getSaveError());
+        if (recordsService.getLoadWarning() != null) LOGGER.warning(recordsService.getLoadWarning());
 		GameState gameState;
 
 		int returnCode = 1;
@@ -122,17 +134,20 @@ public final class Core {
 						0, 0);
 
 				// Game & score.
+				RunSession runSession = new RunSession(UUID.randomUUID().toString());
+                recordsService.startRun(runSession.getRunId());
 				do {
 					// One extra live every few levels.
 					boolean bonusLife = gameState.getLevel()
 							% EXTRA_LIFE_FRECUENCY == 0
 							&& gameState.getLivesRemaining()
 									< selectedShip.getMaxLives();
-					
+
 					currentScreen = new GameScreen(gameState,
 							applyDifficulty(CampaignStageData
 									.getStageSettings(gameState.getLevel())),
-							bonusLife, width, height, FPS, selectedShip);
+							bonusLife, width, height, FPS, selectedShip,
+							runSession);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " game screen at " + FPS + " fps.");
 					frame.setScreen(currentScreen);
@@ -162,13 +177,19 @@ public final class Core {
 				} while (gameState.getLivesRemaining() > 0
 						&& gameState.getLevel() <= CampaignStageData.getTotalStages());
 
+                RunRecord completedRun = runSession.finish(gameState.getScore(),
+                        gameState.getShipsDestroyed(), System.currentTimeMillis());
+                if (recordsService.completeRun(completedRun))
+                    LOGGER.info("Completed run recorded:\n" + RunRecordFormatter.format(completedRun));
+
 				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 						+ " score screen at " + FPS + " fps, with a score of "
 						+ gameState.getScore() + ", "
 						+ gameState.getLivesRemaining() + " lives remaining, "
 						+ gameState.getBulletsShot() + " bullets shot and "
 						+ gameState.getShipsDestroyed() + " ships destroyed.");
-				currentScreen = new ScoreScreen(width, height, FPS, gameState);
+				currentScreen = new ScoreScreen(width, height, FPS, gameState,
+                        recordsService.getCurrentRunUnlocks());
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
 				break;
@@ -180,6 +201,10 @@ public final class Core {
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing high score screen.");
 				break;
+            case 9:
+                currentScreen = new PlayerRecordsScreen(width,height,FPS,recordsService);
+                returnCode = frame.setScreen(currentScreen);
+                break;
 			case 4:
 				currentScreen = new SettingsScreen(width, height, FPS);
 				returnCode = frame.setScreen(currentScreen);
@@ -198,14 +223,21 @@ public final class Core {
 				break;
 			case 8:
 				// Infinite mode & score.
+                RunSession infiniteSession = new RunSession(UUID.randomUUID().toString());
+                recordsService.startRun(infiniteSession.getRunId());
 				currentScreen = new InfiniteGameScreen(gameState, width, height,
-						FPS);
+						FPS, infiniteSession);
 				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 						+ " infinite game screen at " + FPS + " fps.");
 				frame.setScreen(currentScreen);
 				LOGGER.info("Closing infinite game screen.");
 
 				gameState = ((InfiniteGameScreen) currentScreen).getGameState();
+                if (!((InfiniteGameScreen) currentScreen).isAbandoned()) {
+                    RunRecord infiniteRecord = infiniteSession.finish(gameState.getScore(),
+                            gameState.getShipsDestroyed(), System.currentTimeMillis());
+                    recordsService.completeRun(infiniteRecord);
+                }
 
 				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 						+ " score screen at " + FPS + " fps, with a score of "
@@ -214,7 +246,7 @@ public final class Core {
 						+ gameState.getShipsDestroyed() + " ships destroyed.");
 				// Infinite mode score screen, Space plays infinite mode again.
 				currentScreen = new ScoreScreen(width, height, FPS, gameState,
-						true);
+						true, recordsService.getCurrentRunUnlocks());
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing score screen.");
 				break;
@@ -222,6 +254,8 @@ public final class Core {
 
 		} while (returnCode != 0);
 
+        recordsService.close();
+        if (recordsService.getSaveError() != null) LOGGER.warning(recordsService.getSaveError());
 		fileHandler.flush();
 		fileHandler.close();
 		System.exit(0);
@@ -256,7 +290,7 @@ public final class Core {
 
 	/**
 	 * Controls access to the logger.
-	 * 
+	 *
 	 * @return Application logger.
 	 */
 	public static Logger getLogger() {
@@ -265,7 +299,7 @@ public final class Core {
 
 	/**
 	 * Controls access to the drawing manager.
-	 * 
+	 *
 	 * @return Application draw manager.
 	 */
 	public static DrawManager getDrawManager() {
@@ -274,7 +308,7 @@ public final class Core {
 
 	/**
 	 * Controls access to the input manager.
-	 * 
+	 *
 	 * @return Application input manager.
 	 */
 	public static InputManager getInputManager() {
@@ -283,7 +317,7 @@ public final class Core {
 
 	/**
 	 * Controls access to the file manager.
-	 * 
+	 *
 	 * @return Application file manager.
 	 */
 	public static FileManager getFileManager() {
@@ -292,7 +326,7 @@ public final class Core {
 
 	/**
 	 * Controls creation of new cooldowns.
-	 * 
+	 *
 	 * @param milliseconds
 	 *            Duration of the cooldown.
 	 * @return A new cooldown.
@@ -303,7 +337,7 @@ public final class Core {
 
 	/**
 	 * Controls creation of new cooldowns with variance.
-	 * 
+	 *
 	 * @param milliseconds
 	 *            Duration of the cooldown.
 	 * @param variance
@@ -313,5 +347,17 @@ public final class Core {
 	public static Cooldown getVariableCooldown(final int milliseconds,
 			final int variance) {
 		return new Cooldown(milliseconds, variance);
+	}
+
+    public static RecordsService getRecordsService() { return recordsService; }
+
+    private static void registerRecordsShutdownHook(final RecordsService service) {
+		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+			public void run() {
+				service.close();
+				if (service.getSaveError() != null)
+					LOGGER.warning(service.getSaveError());
+			}
+		}, "records-profile-shutdown"));
 	}
 }

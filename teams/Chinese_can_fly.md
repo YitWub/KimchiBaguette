@@ -4,6 +4,8 @@
 
 **Course:** CSE2024 · Section 24592 · 2026 Semester 2
 
+**Git workflow:** [Team Git workflow](../docs/Git_Workflow.md)
+
 ## 1. Team Introduction
 
 We are a seven-member team developing a records and achievements system for Space Invaders. Our goal is to help players review performance, track progress, and unlock achievements.

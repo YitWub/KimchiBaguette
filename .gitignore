@@ -170,3 +170,7 @@ log*
 *.ttf
 !res/font.ttf
 .checkstyle
+
+# Local compile output and personal high scores
+/out/
+/scores
