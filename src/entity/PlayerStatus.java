@@ -1,5 +1,8 @@
 package entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Manages the player's discrete lives and damage processing. The current game
  * does not model a separate health pool; one accepted hit consumes one life.
@@ -7,6 +10,10 @@ package entity;
  * A timed shield can absorb incoming damage. It is held here rather than on
  * {@link Ship} so that every damage source goes through one check, and so the
  * Gameplay HUD can read its remaining time without touching the ship.
+ *
+ * Every change is announced to the registered
+ * {@link PlayerStatusListener}s, so the Gameplay HUD and Visual Effect
+ * System can react without polling.
  */
 public class PlayerStatus {
 
@@ -24,6 +31,15 @@ public class PlayerStatus {
 	 * shield is up; call {@link #isShieldActive()}.
 	 */
 	private long shieldExpiryTime;
+	/**
+	 * Whether a shield was up the last time the clock was looked at. Keeps
+	 * {@link PlayerStatusEvent.Type#SHIELD_ENDED} to one event per shield,
+	 * since nothing counts the shield down frame by frame.
+	 */
+	private boolean shieldAnnounced;
+	/** Listeners from the other systems. */
+	private final List<PlayerStatusListener> listeners =
+			new ArrayList<PlayerStatusListener>();
 
 	/**
 	 * Creates a valid player-life state.
@@ -46,6 +62,67 @@ public class PlayerStatus {
 	}
 
 	/**
+	 * Registers a listener. Registering the same listener twice has no
+	 * effect, so it never receives an event twice.
+	 *
+	 * @param listener
+	 *            Listener to add.
+	 */
+	public final void addListener(final PlayerStatusListener listener) {
+		if (listener != null && !this.listeners.contains(listener))
+			this.listeners.add(listener);
+	}
+
+	/**
+	 * Removes a listener.
+	 *
+	 * @param listener
+	 *            Listener to remove.
+	 */
+	public final void removeListener(final PlayerStatusListener listener) {
+		this.listeners.remove(listener);
+	}
+
+	/**
+	 * Sends an event to all listeners.
+	 *
+	 * @param event
+	 *            Event to send.
+	 */
+	private void publish(final PlayerStatusEvent event) {
+		// Copy so that a listener may add or remove one during the call.
+		for (PlayerStatusListener listener
+				: new ArrayList<PlayerStatusListener>(this.listeners))
+			listener.onPlayerStatusEvent(event);
+	}
+
+	/**
+	 * Reports a shield that has run out. The shield is held as an expiry time
+	 * rather than counted down frame by frame, so something has to look at
+	 * the clock for its end to be announced; {@link screen.GameScreen} calls
+	 * this once per frame.
+	 */
+	public final void update() {
+		announceExpiredShield();
+	}
+
+	/**
+	 * Sends {@link PlayerStatusEvent.Type#SHIELD_ENDED} once, the first time
+	 * the clock is read after the shield has run out. Called before anything
+	 * that depends on the shield being up, so the end of a shield is never
+	 * announced after the hit that got through it.
+	 */
+	private void announceExpiredShield() {
+		if (!this.shieldAnnounced || isShieldActive())
+			return;
+
+		// Cleared before publishing, so a listener that calls back in does
+		// not see the same expiry a second time.
+		this.shieldAnnounced = false;
+		publish(PlayerStatusEvent.shieldEnded(this));
+	}
+
+	/**
 	 * Processes incoming damage and reduces lives. An active shield absorbs
 	 * the hit, so no life is lost and the caller is told that no damage was
 	 * applied. Every damage source reaches this method, so the shield covers
@@ -58,10 +135,15 @@ public class PlayerStatus {
 	public final boolean takeDamage(final int damage) {
 		if (damage <= 0 || !isAlive())
 			return false;
-		if (isShieldActive())
+
+		announceExpiredShield();
+		if (isShieldActive()) {
+			publish(PlayerStatusEvent.damageBlocked(this, damage));
 			return false;
+		}
 
 		this.lives = Math.max(0, this.lives - damage);
+		publish(PlayerStatusEvent.damageTaken(this, damage));
 		return true;
 	}
 
@@ -77,15 +159,23 @@ public class PlayerStatus {
 			return false;
 
 		this.lives++;
+		publish(PlayerStatusEvent.lifeGained(this));
 		return true;
 	}
 
 	/**
 	 * Grants a shield, or refreshes the one already active. The player takes
-	 * no damage until it expires.
+	 * no damage until it expires. A refresh is announced as its own kind of
+	 * event, so the HUD can restart a gauge rather than start a second one.
 	 */
 	public final void activateShield() {
+		announceExpiredShield();
+
+		boolean refreshed = isShieldActive();
 		this.shieldExpiryTime = currentTimeMillis() + SHIELD_DURATION;
+		this.shieldAnnounced = true;
+		publish(refreshed ? PlayerStatusEvent.shieldRefreshed(this)
+				: PlayerStatusEvent.shieldStarted(this));
 	}
 
 	/**
@@ -102,7 +192,12 @@ public class PlayerStatus {
 
 	/** Ends an active shield immediately, if there is one. */
 	public final void clearShield() {
+		boolean wasActive = isShieldActive();
+
 		this.shieldExpiryTime = 0;
+		this.shieldAnnounced = false;
+		if (wasActive)
+			publish(PlayerStatusEvent.shieldEnded(this));
 	}
 
 	/** @return Whether a shield is currently absorbing damage. */

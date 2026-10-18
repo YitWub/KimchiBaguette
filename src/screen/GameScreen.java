@@ -29,6 +29,9 @@ import vfx.ParticleSystem;
 import entity.EnemyShip;
 import entity.EnemyShipFormation;
 import entity.Entity;
+import entity.LoggingPlayerStatusListener;
+import entity.PlayerStatusListener;
+import entity.PlayerStatusEvent;
 import entity.PlayerStatus;
 import entity.Ship;
 import entity.ShipType;
@@ -386,6 +389,16 @@ public class GameScreen extends Screen {
 		// Logs boss events until HUD and Visual Effect listeners are added.
 		this.bossManager.getEventManager().addListener(
 				new LoggingBossEventListener());
+		// Same for the player's own status events.
+		this.playerStatus.addListener(new LoggingPlayerStatusListener());
+		// Forward them onto the shared gameplay bus as well, so a system that
+		// already listens there, such as sound effects, does not have to know
+		// about PlayerStatus to receive them.
+		this.playerStatus.addListener(new PlayerStatusListener() {
+			public void onPlayerStatusEvent(final PlayerStatusEvent event) {
+				recordsEvents.publish(event);
+			}
+		});
 		// The boss appears only on boss stages.
 		if (isBossLevel(this.level))
 			this.bossManager.spawn(new BossSpawnRequest(
@@ -436,6 +449,10 @@ public class GameScreen extends Screen {
                 this.achievementNoticeUntil = this.visibleAchievement == null ? 0 : now + 3000;
             }
         }
+
+		// Outside the input-delay check: a shield that runs out has to be
+		// announced even while the level is finishing.
+		this.playerStatus.update();
 
         if (this.inputDelay.checkFinished() && !this.levelFinished) {
             if (this.runSession != null) this.runSession.startActiveSegment(System.nanoTime());
@@ -993,6 +1010,16 @@ public class GameScreen extends Screen {
 	}
 
 	/**
+	 * Gives the other systems the player's status, to read lives and shield
+	 * state and to register a {@link entity.PlayerStatusListener}.
+	 *
+	 * @return Player status of the current game.
+	 */
+	public final PlayerStatus getPlayerStatus() {
+		return this.playerStatus;
+	}
+
+	/**
 	 * Returns a GameState object representing the status of the game.
 	 *
 	 * @return Current game state.
@@ -1026,6 +1053,14 @@ public class GameScreen extends Screen {
         this.recordsEvents.publish(new EnemyDefeatedEvent(this.runSession.getRunId(),id));
     }
 
+    /**
+     * Gives other systems the shared gameplay event bus. Player status events
+     * are published here too, so a listener can subscribe with
+     * {@code subscribe(PlayerStatusEvent.class, listener)} and read the type
+     * from {@link entity.PlayerStatusEvent#getType()}.
+     *
+     * @return Shared gameplay event publisher.
+     */
     public GameplayEventPublisher getGameplayEvents() { return this.recordsEvents; }
 
     public String getActiveRunId() { return this.runSession == null ? null : this.runSession.getRunId(); }
