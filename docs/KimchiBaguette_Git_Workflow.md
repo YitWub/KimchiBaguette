@@ -24,9 +24,9 @@ reaches `main`.
   long-lived branch and one kind of short-lived branch is a rule set everybody
   can hold in their head. A workflow that is misunderstood is worse than a
   simple one, because a botched merge blocks the rest of the project.
-- **It matches the tools we already use.** Branch, PR, review, approval and
-  merge all happen in the GitHub web UI, so no extra tooling or local setup is
-  required.
+- **It matches the tools we already use.** Branch, PR, review, approval, squash
+  merge and branch deletion all happen in the GitHub web UI, so no extra tooling
+  or local setup is required.
 
 ### Why we did not choose the other common workflows
 
@@ -68,7 +68,7 @@ This project has two remotes and they are used for different purposes.
 
 3. Merge Conditions: Merge into `main` via PR after at least one team member has completed the code review and approval.
 
-4. Keeping Branches: Do not delete a working branch after it is merged. Keeping it costs nothing and means a PR that has to be closed and reopened later, for example when a branch has to be rebuilt on a new base, still has its work on the remote.
+4. Branch Deletion: Delete the corresponding working branch immediately after the merge is complete to keep the remote repository tidy. This applies to a merged branch only. A branch whose PR was closed without merging is kept, because its work has not reached `main` and the PR may be reopened on a new base.
 
 ## 3. Commit Rules
 
@@ -213,7 +213,7 @@ rather than exceptional. The team handles them as follows.
 ## 6. Overall workflow
 
 The diagram below shows the complete process, from picking up a task to
-merging the result.
+deleting the branch.
 
 ```mermaid
 flowchart TD
@@ -228,6 +228,7 @@ flowchart TD
     I --> J{Approved?}
     J -->|Yes| K[Squash & Merge]
     K --> L[main]
+    L --> M[Delete feature/fix branch]
     J -->|No| N[Changes requested]
     N --> O[Update branch]
     O --> E
