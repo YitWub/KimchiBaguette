@@ -11,7 +11,6 @@ import screen.Screen;
 import engine.Cooldown;
 import engine.Core;
 import engine.DrawManager;
-import engine.DrawManager.SpriteType;
 import engine.GameSettings;
 
 /**
@@ -152,7 +151,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 					+ DESCENT_DISTANCE + ": (" + positionX + "," + positionY + ")");
 		this.waveBaseY = this.positionY;
 		this.shooters = new ArrayList<EnemyShip>();
-		SpriteType spriteType;
+		EnemyType enemyType;
 
 		this.logger.info("Initializing " + nShipsWide + "x" + nShipsHigh
 				+ " ship formation in (" + positionX + "," + positionY + ")");
@@ -164,17 +163,17 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		for (List<EnemyShip> column : this.enemyShips) {
 			for (int i = 0; i < this.nShipsHigh; i++) {
 				if (i / (float) this.nShipsHigh < PROPORTION_C)
-					spriteType = SpriteType.EnemyShipC1;
+					enemyType = EnemyType.C;
 				else if (i / (float) this.nShipsHigh < PROPORTION_B
 						+ PROPORTION_C)
-					spriteType = SpriteType.EnemyShipB1;
+					enemyType = EnemyType.B;
 				else
-					spriteType = SpriteType.EnemyShipA1;
+					enemyType = EnemyType.A;
 
-				column.add(new EnemyShip((SEPARATION_DISTANCE 
-						* this.enemyShips.indexOf(column))
-								+ positionX, (SEPARATION_DISTANCE * i)
-								+ positionY, spriteType));
+				column.add(EnemyShip.createByType(enemyType,
+						(SEPARATION_DISTANCE * this.enemyShips.indexOf(column))
+								+ positionX,
+						(SEPARATION_DISTANCE * i) + positionY));
 				this.shipCount++;
 			}
 		}
