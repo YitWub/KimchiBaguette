@@ -136,8 +136,8 @@ public class PlayerStatus {
 	/**
 	 * Applies or refreshes a two-second, 50-percent movement slow. An active
 	 * shield blocks a new slow and also clears an existing one on the next
-	 * status update. This API reports the result directly; it does not change
-	 * the shared B6 event contract.
+	 * status update. Successful starts and refreshes are published to the
+	 * registered status listeners.
 	 *
 	 * @param ship
 	 *            Player ship to affect.
@@ -170,6 +170,8 @@ public class PlayerStatus {
 			ship.setSlowDebuffActive(true);
 		}
 		this.slowExpiryTime = currentTimeMillis() + SLOW_DURATION;
+		publish(refreshed ? PlayerStatusEvent.slowRefreshed(this)
+				: PlayerStatusEvent.slowStarted(this));
 		return refreshed ? SlowApplicationResult.REFRESHED
 				: SlowApplicationResult.STARTED;
 	}
@@ -190,6 +192,11 @@ public class PlayerStatus {
 		long remaining = this.slowExpiryTime - currentTimeMillis();
 		return this.slowedShip != null && remaining > 0
 				? (int) remaining : 0;
+	}
+
+	/** Ends the active movement-only slow, if one is present. */
+	public final void clearSlowDebuff() {
+		endSlowDebuff();
 	}
 
 	/** @return Full duration of the slow debuff, in milliseconds. */
@@ -241,7 +248,8 @@ public class PlayerStatus {
 
 	/** Ends the movement-only modifier without touching the firing interval. */
 	private void endSlowDebuff() {
-		if (this.slowedShip != null) {
+		boolean wasActive = this.slowedShip != null;
+		if (wasActive) {
 			if (this.slowFollowsBaseSpeed
 					&& this.slowedShip.getSpeed() == this.slowTrackedBaseSpeed)
 				this.slowedShip.setSpeed(this.slowedShip.getBaseSpeed());
@@ -250,6 +258,8 @@ public class PlayerStatus {
 		this.slowedShip = null;
 		this.slowExpiryTime = 0;
 		this.slowFollowsBaseSpeed = false;
+		if (wasActive)
+			publish(PlayerStatusEvent.slowEnded(this));
 	}
 
 	/**
@@ -305,6 +315,8 @@ public class PlayerStatus {
 
 		this.lives = Math.max(0, this.lives - damage);
 		publish(PlayerStatusEvent.damageTaken(this, damage));
+		if (!isAlive())
+			updateSlowDebuff();
 		return true;
 	}
 
