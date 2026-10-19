@@ -28,9 +28,9 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	/** Proportion of B-type ships. */
 	private static final double PROPORTION_B = 0.4;
 	/** Lateral speed of the formation. */
-	private static final int X_SPEED = 8;
+	private static final int X_SPEED = 2;
 	/** Downwards speed of the formation. */
-	private static final int Y_SPEED = 4;
+	private static final int Y_SPEED = 2;
 	/** Speed of the bullets shot by the members. */
 	private static final int BULLET_SPEED = 4;
 	/** Proportion of differences between shooting times. */
@@ -65,7 +65,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
     }
 
 	/** Current movement pattern. */
-    private MovementPattern movementPattern = MovementPattern.DIAGONAL_BOUNCE;
+    private MovementPattern movementPattern = MovementPattern.CLASSIC;
 	/** Horizontal direction of the wave: 1 = right, -1 = left. */
 	private int waveDirection = 1;
 	/** Current phase of the wave. */
@@ -135,7 +135,10 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	 * @throws IllegalArgumentException If the initial position is outside the
 	 *            left/top bounds or is not aligned to the descent distance.
 	 */
-	public EnemyShipFormation(final GameSettings gameSettings) {
+	public EnemyShipFormation(final GameSettings gameSettings, final int level) {
+        // Select the movement pattern according to the current level.
+        MovementPattern[] patterns = MovementPattern.values();
+        this.movementPattern = patterns[Math.floorMod(level - 1, patterns.length)];
 		this.drawManager = Core.getDrawManager();
 		this.logger = Core.getLogger();
 		this.enemyShips = new ArrayList<List<EnemyShip>>();
@@ -369,12 +372,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
         movementInterval++;
 
-        int movementDelay = this.movementSpeed;
-
-// Update diagonal movement more frequently for smooth animation.
-        if (this.movementPattern == MovementPattern.DIAGONAL_BOUNCE) {
-            movementDelay = 2;
-        }
+        int movementDelay = 2;
 
         if (movementInterval >= movementDelay) {
             movementInterval = 0;
