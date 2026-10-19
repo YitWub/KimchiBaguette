@@ -114,7 +114,7 @@ public final class GameplayIntegrationTest {
         EnemyShip normal = formation.iterator().next();
         normal.setPositionX(player.getPositionX()); normal.setPositionY(150);
         EnemyShip special = new EnemyShip(); special.setPositionX(player.getPositionX()); special.setPositionY(80);
-        set(game,"enemyShipSpecial",special);
+        set(get(game,"bonusEnemyManager"),"bonusShip",special);
         List<String> events = new ArrayList<String>();
         game.getGameplayEvents().subscribe(event.EnemyDefeatedEvent.class, e -> events.add(e.getEventId()));
         player.setShieldActive(true);
