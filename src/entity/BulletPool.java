@@ -36,6 +36,28 @@ public final class BulletPool {
 	 */
 	public static Bullet getBullet(final int positionX,
 			final int positionY, final int speed) {
+		return getBullet(positionX, positionY, speed,
+				speed < 0 ? Bullet.Owner.PLAYER : Bullet.Owner.ENEMY);
+	}
+
+	/**
+	 * Returns a bullet from the pool, or a new one, with an explicit owner.
+	 * The owner is always written, so a recycled bullet never keeps the one
+	 * it had on its previous flight.
+	 *
+	 * @param positionX
+	 *            Requested position of the bullet in the X axis.
+	 * @param positionY
+	 *            Requested position of the bullet in the Y axis.
+	 * @param speed
+	 *            Requested speed of the bullet, positive or negative.
+	 * @param owner
+	 *            Side that fired the bullet.
+	 * @return Requested bullet.
+	 */
+	public static Bullet getBullet(final int positionX,
+			final int positionY, final int speed,
+			final Bullet.Owner owner) {
 		Bullet bullet;
 		if (!pool.isEmpty()) {
 			bullet = pool.iterator().next();
@@ -43,12 +65,13 @@ public final class BulletPool {
 			bullet.setPositionX(positionX - bullet.getWidth() / 2);
 			bullet.setPositionY(positionY);
 			bullet.setSpeed(speed);
+			bullet.setOwner(owner);
 			bullet.setSprite();
 		} else {
-			bullet = new Bullet(positionX, positionY, speed);
+			bullet = new Bullet(positionX, positionY, speed, owner);
 			bullet.setPositionX(positionX - bullet.getWidth() / 2);
 		}
-		
+
 		bullet.setSpeedX(0);
 		return bullet;
 	}
@@ -60,6 +83,28 @@ public final class BulletPool {
     	bullet.setSpeedX(speedX);
 
     	return bullet;
+	}
+
+	/**
+	 * Returns a bullet travelling on both axes, with an explicit owner.
+	 *
+	 * @param x
+	 *            Requested position of the bullet in the X axis.
+	 * @param y
+	 *            Requested position of the bullet in the Y axis.
+	 * @param speedY
+	 *            Requested speed on the Y axis.
+	 * @param speedX
+	 *            Requested speed on the X axis.
+	 * @param owner
+	 *            Side that fired the bullet.
+	 * @return Requested bullet.
+	 */
+	public static Bullet getBullet(final int x, final int y, final int speedY,
+			final int speedX, final Bullet.Owner owner) {
+		Bullet bullet = getBullet(x, y, speedY, owner);
+		bullet.setSpeedX(speedX);
+		return bullet;
 	}
 
 	/**

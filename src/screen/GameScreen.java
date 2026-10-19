@@ -760,7 +760,7 @@ public class GameScreen extends Screen {
         if (this.levelFinished) return;
 		Set<Bullet> recyclable = new HashSet<Bullet>();
 		for (Bullet bullet : this.bullets)
-			if (bullet.getSpeed() > 0) {
+			if (bullet.isEnemyBullet()) {
 				if (checkCollision(bullet, this.ship) && !this.levelFinished) {
 					recyclable.add(bullet);
 					if (!this.ship.isChameleonHullActive()) {
@@ -892,7 +892,7 @@ public class GameScreen extends Screen {
 		Set<Bullet> neutralized = new HashSet<Bullet>();
 
 		for (Bullet bullet : this.bullets)
-			if (bullet.getSpeed() > 0
+			if (bullet.isEnemyBullet()
 					&& OrbitalAnnihilator.hits(this.ship, bullet))
 				neutralized.add(bullet);
 

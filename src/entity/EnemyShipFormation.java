@@ -448,7 +448,8 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		int enemyY = shooter.getPositionY();
 
 		if (player == null) {
-			bullets.add(BulletPool.getBullet(enemyX, enemyY, BULLET_SPEED));
+			bullets.add(BulletPool.getBullet(enemyX, enemyY, BULLET_SPEED,
+					Bullet.Owner.ENEMY));
 			return;
 		}
 
@@ -466,7 +467,10 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 			speedY = (int) Math.round((dy / distance) * BULLET_SPEED);
 		}
 
-		bullets.add(BulletPool.getBullet(enemyX, enemyY, speedY, speedX));
+		// An aimed shot can travel sideways or upwards, so the owner is set
+		// explicitly rather than inferred from the speed.
+		bullets.add(BulletPool.getBullet(enemyX, enemyY, speedY, speedX,
+				Bullet.Owner.ENEMY));
 	}
 
 	/**
