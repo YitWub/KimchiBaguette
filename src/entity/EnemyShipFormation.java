@@ -371,9 +371,15 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
         int movementDelay = this.movementSpeed;
 
-// Update diagonal movement more frequently for smooth animation.
+        // The diagonal path takes smaller steps than the classic sweep, so
+        // that it reads as a line rather than a jump. The delay is scaled by
+        // the same ratio instead of being fixed, so the formation still
+        // covers ground at the rate the stage settings ask for and still
+        // speeds up as enemies are defeated. A fixed delay threw away both,
+        // because movementSpeed is what carries them.
         if (this.movementPattern == MovementPattern.DIAGONAL_BOUNCE) {
-            movementDelay = 2;
+            movementDelay = Math.max(1,
+                    this.movementSpeed * DIAGONAL_SPEED / X_SPEED);
         }
 
         if (movementInterval >= movementDelay) {
