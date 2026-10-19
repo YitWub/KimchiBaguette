@@ -508,6 +508,10 @@ public class GameScreen extends Screen {
 							&& this.level == OrbitalAnnihilator.REQUIRED_LEVEL
 							&& System.currentTimeMillis() - this.spaceHeldSince >= ANNIHILATOR_HOLD_TIME) {
 						this.annihilator.trigger();
+						// Charging stops the ship shooting, so a burst that
+						// is still owed is dropped rather than fired when
+						// the beam is over.
+						this.ship.cancelBurst();
 					}
 				} else {
 					this.spaceHeldSince = 0;
@@ -560,7 +564,7 @@ public class GameScreen extends Screen {
 						this.ship.getPositionY(), this.bossBullets);
 			}
 
-			if (!this.ship.isDestroyed())
+			if (!this.ship.isDestroyed() && !this.annihilator.isCharging())
 				this.bulletsShot += this.ship.updateBurst(this.bullets);
 
 			updateBallMovement();
