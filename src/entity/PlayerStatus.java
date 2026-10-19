@@ -278,6 +278,21 @@ public class PlayerStatus {
 	 *            Amount of damage to apply.
 	 * @return Whether damage was applied.
 	 */
+	/**
+	 * Announces a hit that a protection outside this class absorbed, such as
+	 * the Energy Shield item held by {@link Ship}. No life is taken; this
+	 * only tells the listeners, so that a blocked hit is reported the same
+	 * way whichever shield blocked it.
+	 *
+	 * @param damage
+	 *            Amount of damage that was absorbed.
+	 */
+	public final void announceDamageBlocked(final int damage) {
+		if (damage <= 0)
+			return;
+		publish(PlayerStatusEvent.damageBlocked(this, damage));
+	}
+
 	public final boolean takeDamage(final int damage) {
 		if (damage <= 0 || !isAlive())
 			return false;

@@ -76,6 +76,26 @@ public final class BulletPool {
 		return bullet;
 	}
 
+	/**
+	 * Returns a bullet travelling on both axes, guessing the owner from the
+	 * sign of the vertical speed.
+	 *
+	 * @deprecated Use {@link #getBullet(int, int, int, int, Bullet.Owner)}.
+	 *             An aimed enemy shot can travel sideways or upwards, and
+	 *             guessing from the speed hands it back as a player bullet,
+	 *             which lets it destroy the enemy that fired it. No caller
+	 *             uses this overload any more.
+	 * @param x
+	 *            Requested position of the bullet in the X axis.
+	 * @param y
+	 *            Requested position of the bullet in the Y axis.
+	 * @param speedY
+	 *            Requested speed on the Y axis.
+	 * @param speedX
+	 *            Requested speed on the X axis.
+	 * @return Requested bullet.
+	 */
+	@Deprecated
 	public static Bullet getBullet(
         int x, int y, int speedY, int speedX) {
 

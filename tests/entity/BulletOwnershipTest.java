@@ -62,6 +62,9 @@ public final class BulletOwnershipTest {
 		// The pool is not empty now, so this call reuses the object above.
 		Bullet playerShot = BulletPool.getBullet(10, 10, -6,
 				Bullet.Owner.PLAYER);
+		check(playerShot == enemyShot,
+				"The pool hands the recycled object back, so the check below "
+						+ "really exercises the reuse path");
 		check(!playerShot.isEnemyBullet(),
 				"A recycled bullet does not keep its previous owner");
 		recycle(playerShot);

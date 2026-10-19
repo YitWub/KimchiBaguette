@@ -736,8 +736,15 @@ public class GameScreen extends Screen {
 		Set<Bullet> recyclable = new HashSet<Bullet>();
 		for (Bullet bullet : this.bullets) {
 			bullet.update();
+			// An aimed shot can travel almost horizontally, so a bullet that
+			// leaves sideways has to be retired as well. Checking only the Y
+			// axis left a bullet with no vertical speed on screen for the
+			// rest of the level, drawn and collision-checked every frame and
+			// never returned to the pool.
 			if (bullet.getPositionY() < SEPARATION_LINE_HEIGHT
-					|| bullet.getPositionY() > this.height)
+					|| bullet.getPositionY() > this.height
+					|| bullet.getPositionX() + bullet.getWidth() < 0
+					|| bullet.getPositionX() > this.width)
 				recyclable.add(bullet);
 		}
 		this.bullets.removeAll(recyclable);
@@ -901,6 +908,11 @@ public class GameScreen extends Screen {
 			return false;
 		if (this.ship.isShieldActive()) {
 			this.logger.info("Shot absorbed by Energy Shield.");
+			// The Energy Shield belongs to Ship, so PlayerStatus cannot see
+			// this hit by itself. Announce it anyway, or a listener would
+			// hear a blocked hit only when the timed shield was the one that
+			// blocked it.
+			this.playerStatus.announceDamageBlocked(damage);
 			return false;
 		}
 		// PlayerStatus owns the timed shield, so its answer decides whether
