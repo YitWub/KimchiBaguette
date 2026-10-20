@@ -75,8 +75,9 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
     /** Horizontal and vertical speed of the diagonal movement. */
     private static final int DIAGONAL_SPEED = 4;
     /**
-     * Frames between diagonal steps at the reference pace below. Small, so
-     * the path reads as a line rather than a jump.
+     * Frames between diagonal steps. It stays at this value on every stage
+     * and however many enemies are left, so the path reads as a line rather
+     * than a jump; the step length is what carries the speed instead.
      */
     private static final int DIAGONAL_INTERVAL = 2;
     /**
@@ -86,7 +87,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
     private static final int DIAGONAL_MAX_SPEED = 16;
     /**
      * The movementSpeed a full formation has on the opening stage, which is
-     * the pace the diagonal pattern was tuned at. The delay is anchored to
+     * the pace the diagonal pattern was tuned at. The step is anchored to
      * it so that stage one plays exactly as before, while a harder stage or
      * a thinned-out formation still changes it.
      */
@@ -261,17 +262,12 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
 
     /**
-     * Moves the formation along a diamond-shaped loop.
-     * The path adapts to the formation's size.
-     *
-     * @return Movement on the X and Y axes.
-     */
-    /**
-     * Distance the diagonal pattern covers in one step. The delay between
-     * steps is kept short so the path stays smooth, so the step itself is
-     * what carries the speed: it grows as movementSpeed falls, which is how
-     * the stage setting and the speed-up as enemies are defeated reach this
-     * pattern. The fixed step it used before ignored both.
+     * Distance the diagonal pattern covers in one step. The interval between
+     * steps stays at {@link #DIAGONAL_INTERVAL} frames so the path stays
+     * smooth, so the step itself is what carries the speed: it grows as
+     * movementSpeed falls, which is how the stage setting and the speed-up
+     * as enemies are defeated reach this pattern. The fixed step it used
+     * before ignored both.
      *
      * <p>Anchored so that a full formation on the opening stage keeps the
      * step of {@link #DIAGONAL_SPEED} it has today, and capped so a nearly
@@ -285,6 +281,12 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
         return Math.max(1, Math.min(DIAGONAL_MAX_SPEED, scaled));
     }
 
+    /**
+     * Moves the formation along a diamond-shaped loop.
+     * The path adapts to the formation's size.
+     *
+     * @return Movement on the X and Y axes.
+     */
     private int[] moveDiagonalBounce() {
         final int step = diagonalStep();
         int minX = SIDE_MARGIN;
@@ -408,12 +410,12 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
         int movementDelay = this.movementSpeed;
 
-        // The diagonal pattern used a delay of two, which threw away
-        // movementSpeed and with it the stage setting and the speed-up as
-        // enemies are defeated. The delay is derived from movementSpeed
-        // now, anchored so that a full formation on the opening stage keeps
-        // the delay of two it has today: this fixes what the delay ignored
-        // without changing how the game already plays.
+        // The diagonal pattern holds its interval at DIAGONAL_INTERVAL
+        // frames, which keeps the path smooth. movementSpeed is not thrown
+        // away with it: diagonalStep() reads it and lengthens the step
+        // instead, so the stage setting and the speed-up as enemies are
+        // defeated reach this pattern through the distance covered per step
+        // rather than through the interval between steps.
         if (this.movementPattern == MovementPattern.DIAGONAL_BOUNCE) {
             movementDelay = DIAGONAL_INTERVAL;
         }
