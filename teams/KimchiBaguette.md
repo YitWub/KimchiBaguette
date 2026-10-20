@@ -37,12 +37,17 @@ shots, 3 lives), Speedster (speed 4, 400 ms, 2 lives) and Heavy Tank (speed 1,
 speed, fire interval and life count into the game screen, and only the shield-capable
 ship can hold a shield.
 
-**R2. Enemy ships using several attack methods.**
-Three projectile types — Normal (one shot), Rapid (two shots 100 ms apart) and Multi
-(three shots in one volley) — and a shooting cooldown held per enemy ship instead of
-per formation, so that enemies fire independently of each other.
-*Complete when* each projectile type is observable in play, and two enemies in the same
-formation can fire at different times.
+**R2. Player projectile types and aimed enemy fire.**
+Three projectile types on the player's side, one per selectable ship: Normal (one shot),
+Rapid (two shots 100 ms apart) and Multi (three shots in one spreading volley). Enemies
+keep a single kind of bullet. What varies on their side is who fires and where: the
+formation holds one shooting cooldown that decides when a shot is taken, each bottom-row
+enemy holds its own cooldown that decides which of them is eligible to take it, and the
+shot is aimed at the player's position rather than straight down. Several attack methods
+per enemy are out of scope.
+*Complete when* each of the three projectile types is observable from the ship it belongs
+to, the enemy that fires changes between shots within one formation, and an enemy bullet
+visibly travels at an angle towards the player instead of vertically.
 
 **R3. Enemy ships with distinct movement trajectories.**
 At least two movement patterns in addition to the baseline formation sweep, with
