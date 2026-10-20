@@ -46,8 +46,10 @@ enemy holds its own cooldown that decides which of them is eligible to take it, 
 shot is aimed at the player's position rather than straight down. Several attack methods
 per enemy are out of scope.
 *Complete when* each of the three projectile types is observable from the ship it belongs
-to, the enemy that fires changes between shots within one formation, and an enemy bullet
-visibly travels at an angle towards the player instead of vertically.
+to, several enemies in one formation take turns firing — the shooter is drawn at random
+from those whose own cooldown is ready, so the same enemy may well fire twice in a row,
+and does so every time only one is left in the bottom row — and an enemy bullet visibly
+travels at an angle towards the player instead of vertically.
 
 **R3. Enemy ships with distinct movement trajectories.**
 At least two movement patterns in addition to the baseline formation sweep, each
