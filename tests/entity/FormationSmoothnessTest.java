@@ -102,58 +102,78 @@ public final class FormationSmoothnessTest {
 				+ " altitude, so it never gets stuck going down");
 	}
 
-	private static Measure measure(final String pattern, final int baseSpeed,
-			final int killedPercent) throws Exception {
-		EnemyShipFormation formation = formation(baseSpeed, pattern);
-		destroyShare(formation, killedPercent);
 
-		Measure m = new Measure();
-		int lastX = read(formation, "positionX");
-		int lastY = read(formation, "positionY");
-		int lastWidth = read(formation, "width");
-		int lastHeight = read(formation, "height");
-		int idle = 0;
-		double travelled = 0;
+    private static Measure measure(final String pattern, final int baseSpeed,
+                                   final int killedPercent) throws Exception {
 
-		for (int frame = 0; frame < SAMPLE_FRAMES; frame++) {
-			formation.update();
-			int x = read(formation, "positionX");
-			int y = read(formation, "positionY");
-			int width = read(formation, "width");
-			int height = read(formation, "height");
+        EnemyShipFormation formation = formation(baseSpeed, pattern);
+        destroyShare(formation, killedPercent);
 
-			// When defeated enemies leave, the formation re-anchors itself
-			// on the ones that remain. That is not movement, so it is left
-			// out of the measure.
-			if (width != lastWidth || height != lastHeight) {
-				lastWidth = width;
-				lastHeight = height;
-				lastX = x;
-				lastY = y;
-				continue;
-			}
-			double step = Math.hypot(x - lastX, y - lastY);
+        // Remove destroyed ships before selecting a ship to track.
+        formation.update();
 
-			if (step == 0)
-				idle++;
-			else
-				idle = 0;
-			m.maxIdle = Math.max(m.maxIdle, idle);
-			m.maxJump = Math.max(m.maxJump, step);
-			travelled += step;
-			m.minX = Math.min(m.minX, x);
-			m.maxRight = Math.max(m.maxRight, x + width);
-			if (pattern.equals("CLASSIC") && x != lastX
-					&& y % DESCENT_DISTANCE != 0)
-				m.offGrid = true;
-			lastX = x;
-			lastY = y;
-		}
-		m.pace = travelled / SAMPLE_FRAMES;
-		return m;
-	}
+        // Measure an actual ship, not the formation's anchor.
+        EnemyShip trackedShip = null;
 
-	private static void destroyShare(final EnemyShipFormation formation,
+        for (EnemyShip ship : formation) {
+            if (!ship.isDestroyed()) {
+                trackedShip = ship;
+                break;
+            }
+        }
+
+        if (trackedShip == null) {
+            throw new AssertionError("No surviving enemy ship to track");
+        }
+
+        Measure m = new Measure();
+        int lastX = trackedShip.getPositionX();
+        int lastY = trackedShip.getPositionY();
+
+        int idle = 0;
+        double travelled = 0;
+
+        for (int frame = 0; frame < SAMPLE_FRAMES; frame++) {
+            formation.update();
+
+            int x = trackedShip.getPositionX();
+            int y = trackedShip.getPositionY();
+
+            double step = Math.hypot(x - lastX, y - lastY);
+
+            if (step == 0) {
+                idle++;
+            } else {
+                idle = 0;
+            }
+
+            m.maxIdle = Math.max(m.maxIdle, idle);
+            m.maxJump = Math.max(m.maxJump, step);
+            travelled += step;
+
+            // Check the positions of the actual remaining ships.
+            for (EnemyShip ship : formation) {
+                m.minX = Math.min(m.minX, ship.getPositionX());
+                m.maxRight = Math.max(m.maxRight,
+                        ship.getPositionX() + ship.getWidth());
+            }
+
+            if (pattern.equals("CLASSIC")
+                    && x != lastX
+                    && y % DESCENT_DISTANCE != 0) {
+                m.offGrid = true;
+            }
+
+            lastX = x;
+            lastY = y;
+        }
+
+        m.pace = travelled / SAMPLE_FRAMES;
+        return m;
+    }
+
+
+    private static void destroyShare(final EnemyShipFormation formation,
 			final int killedPercent) {
 		if (killedPercent <= 0)
 			return;

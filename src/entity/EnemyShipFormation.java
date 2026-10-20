@@ -149,14 +149,24 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		DOWN
 	};
 
-	/**
-	 * Constructor, sets the initial conditions.
-	 * 
-	 * @param gameSettings
-	 *            Current game settings.
-	 * @throws IllegalArgumentException If the initial position is outside the
-	 *            left/top bounds or is not aligned to the descent distance.
-	 */
+
+    /**
+     * Constructor compatible with existing callers.
+     *
+     * @param gameSettings Current game settings.
+     */
+    public EnemyShipFormation(final GameSettings gameSettings) {
+        this(gameSettings, 1);
+    }
+
+    /**
+     * Creates an enemy formation with a movement pattern based on the level.
+     *
+     * @param gameSettings Current game settings.
+     * @param level Current game level.
+     * @throws IllegalArgumentException If the initial position is outside the
+     *         left/top bounds or is not aligned to the descent distance.
+     */
 	public EnemyShipFormation(final GameSettings gameSettings, final int level) {
         // Select the movement pattern according to the current level.
         MovementPattern[] patterns = MovementPattern.values();

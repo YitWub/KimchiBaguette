@@ -146,31 +146,47 @@ public final class FormationMovementSpeedTest {
 			formation.destroy(it.next());
 	}
 
-	/**
-	 * Level whose formation uses the diagonal pattern: the pattern rotates
-	 * with the level, classic then wave then diagonal.
-	 */
-	private static final int DIAGONAL_LEVEL = 3;
 
 	/**
 	 * Builds a formation attached to a real screen. GameScreen owns that
 	 * wiring, so it is borrowed rather than rebuilt here.
 	 */
-	private static EnemyShipFormation formation(final int baseSpeed)
-			throws Exception {
-		GameScreen game = new GameScreen(new GameState(DIAGONAL_LEVEL, 0, 3, 0, 0),
-				new GameSettings(5, 4, baseSpeed, 2000), false, 448, 520, 60);
-		game.initialize();
 
-		Field field = GameScreen.class.getDeclaredField("enemyShipFormation");
-		field.setAccessible(true);
-		return (EnemyShipFormation) field.get(game);
-	}
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static EnemyShipFormation formation(final int baseSpeed)
+            throws Exception {
 
-	private static int readInt(final Object target, final String name)
-			throws Exception {
-		Field field = EnemyShipFormation.class.getDeclaredField(name);
-		field.setAccessible(true);
-		return field.getInt(target);
-	}
+        GameScreen game = new GameScreen(
+                new GameState(1, 0, 3, 0, 0),
+                new GameSettings(5, 4, baseSpeed, 2000),
+                false, 448, 520, 60);
+
+        game.initialize();
+
+        Field field = GameScreen.class.getDeclaredField("enemyShipFormation");
+        field.setAccessible(true);
+
+        EnemyShipFormation formation =
+                (EnemyShipFormation) field.get(game);
+
+        // Explicitly select the diagonal pattern.
+        Field patternField = EnemyShipFormation.class
+                .getDeclaredField("movementPattern");
+
+        patternField.setAccessible(true);
+        patternField.set(formation,
+                Enum.valueOf((Class<Enum>) patternField.getType(),
+                        "DIAGONAL_BOUNCE"));
+
+        return formation;
+    }
+
+    private static int readInt(final Object target, final String name)
+            throws Exception {
+        Field field = EnemyShipFormation.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
 }
+
+
