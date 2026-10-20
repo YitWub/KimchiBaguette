@@ -71,9 +71,13 @@ and does not respawn.
 
 **R5. Bonus and penalty elements.**
 Bonus element: an extra life, granted on entry to every third stage while the chosen
-ship is still below its own maximum. A timed shield of our own is out of scope — the
-only shield a player can pick up in play is the Energy Shield item, which belongs to
-another team.
+ship is still below its own maximum. A timed shield of our own is out of scope as a
+bonus element — the only shield a player can pick up in play is the Energy Shield
+item, which belongs to another team. The 3-second shield on PlayerStatus is still in
+the code, but only as a debug-only facility: it is offered to shield-capable ships
+alone, the F2 debug key is its only source, and the one way it touches play is that it
+blocks the obstacle slow while it is up. Either removing it or giving it an in-game
+source is left to a follow-up issue.
 Penalty element: an obstacle that falls through the play area and halves the player's
 movement speed for 2 seconds on contact. It blocks nothing — it deals no damage, costs
 no life and leaves firing untouched.
