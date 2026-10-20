@@ -50,10 +50,13 @@ to, the enemy that fires changes between shots within one formation, and an enem
 visibly travels at an angle towards the player instead of vertically.
 
 **R3. Enemy ships with distinct movement trajectories.**
-At least two movement patterns in addition to the baseline formation sweep, with
-irregular tempo and direction rather than a fixed step.
-*Complete when* two formations of the same size visibly follow different paths, and
-neither of them repeats a constant step interval.
+At least two movement patterns in addition to the baseline formation sweep. The interval
+between steps is deliberately fixed so that a path reads as a line rather than a series
+of jumps; the pace is carried by the step length, which grows on the harder stage
+settings and as enemies are defeated.
+*Complete when* two formations of the same size visibly follow different paths, and a
+formation visibly covers more ground per second on a later stage and as it is thinned
+out, without its motion breaking into jumps.
 
 **R4. Bosses with difficulty levels and varied projectile attacks.**
 Two boss types (1000 HP slow, 800 HP fast), each with three phases driven by remaining
