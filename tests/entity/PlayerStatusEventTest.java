@@ -16,7 +16,7 @@ public final class PlayerStatusEventTest {
 		private long now;
 
 		private FakeClockStatus(final int initialLives, final int maxLives) {
-			super(initialLives, maxLives);
+			super(initialLives, maxLives, true);
 			this.now = 1000000L;
 		}
 
@@ -108,6 +108,7 @@ public final class PlayerStatusEventTest {
 		checkSlowGettersAreReadOnlyAtExpiry();
 		checkSlowBlockAndShieldClear();
 		checkSlowEndsOnDeath();
+		checkExistingEventsSnapshotSlowState();
 		checkIgnoredChangesAreSilent();
 		checkEventPayload();
 		checkListenerRegistration();
@@ -382,6 +383,46 @@ public final class PlayerStatusEventTest {
 		recorder.clear();
 		status.update();
 		checkKinds(recorder, "");
+	}
+
+	/** Existing event kinds also carry the slow state at their creation time. */
+	private static void checkExistingEventsSnapshotSlowState() {
+		FakeClockStatus status = new FakeClockStatus(2, 4);
+		Recorder recorder = new Recorder();
+		Ship ship = new Ship(100, 100);
+		status.addListener(recorder);
+		status.applySlow(ship);
+		recorder.clear();
+
+		status.advance(500);
+		check(status.gainLife(), "A life is gained while slow is active");
+		checkKinds(recorder, "LIFE_GAINED");
+		checkSlowSnapshot(recorder.single(), 1500,
+				"LIFE_GAINED retains the active slow snapshot");
+
+		recorder.clear();
+		check(status.takeDamage(1), "Damage is accepted while slow is active");
+		checkKinds(recorder, "DAMAGE_TAKEN");
+		checkSlowSnapshot(recorder.single(), 1500,
+				"DAMAGE_TAKEN retains the active slow snapshot");
+
+		recorder.clear();
+		status.activateShield();
+		checkKinds(recorder, "SHIELD_STARTED");
+		checkSlowSnapshot(recorder.single(), 0,
+				"SHIELD_STARTED snapshots slow as inactive while shielded");
+
+		recorder.clear();
+		status.update();
+		checkKinds(recorder, "SLOW_ENDED");
+		checkSlowSnapshot(recorder.single(), 0,
+				"SLOW_ENDED always snapshots inactive with zero time");
+	}
+
+	private static void checkSlowSnapshot(final PlayerStatusEvent event,
+			final int expectedRemaining, final String message) {
+		check(event.isSlowActive() == (expectedRemaining > 0)
+				&& event.getSlowRemainingMillis() == expectedRemaining, message);
 	}
 
 	/** Calls that change nothing send nothing. */

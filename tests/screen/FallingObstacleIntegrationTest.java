@@ -12,8 +12,11 @@ import entity.item.ShieldItem;
 import event.GameplayEventListener;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import entity.PlayerStatusEvent;
 
@@ -35,6 +38,8 @@ public final class FallingObstacleIntegrationTest {
 		checkDestroyedShipCollisionOnlyConsumesObstacle();
 		checkBothShieldsBlockSlow();
 		checkEnergyShieldClearsActiveSlowExactlyOnce();
+		checkSpawnFrameDoesNotCollideWithChameleonShip();
+		checkObstacleRendersBehindShipAndShield();
 		checkShipMovementTypesAndChameleon();
 		checkWaveTransitionClearsObstacles();
 		System.out.println("Falling obstacle integration checks passed.");
@@ -218,34 +223,38 @@ public final class FallingObstacleIntegrationTest {
 	}
 
 	private static void checkBothShieldsBlockSlow() throws Exception {
-		GameScreen timedShieldGame = newGame(ShipType.STANDARD);
+		GameScreen timedShieldGame = newGame(ShipType.TANK);
 		makeReady(timedShieldGame, "inputDelay");
-		timedShieldGame.getPlayerStatus().activateShield();
+		PlayerStatus timedShieldStatus = timedShieldGame.getPlayerStatus();
+		int timedShieldLives = timedShieldStatus.getLives();
+		timedShieldStatus.activateShield();
 		obstacles(timedShieldGame).add(new FallingObstacle(
 				ship(timedShieldGame).getPositionX(),
 				ship(timedShieldGame).getPositionY()));
 		collideObstacles(timedShieldGame);
 		check(obstacles(timedShieldGame).isEmpty()
-				&& !timedShieldGame.getPlayerStatus().isSlowActive()
-				&& timedShieldGame.getPlayerStatus().getLives() == 3,
+				&& !timedShieldStatus.isSlowActive()
+				&& timedShieldStatus.getLives() == timedShieldLives,
 				"PlayerStatus shield consumes the obstacle without a penalty");
 
-		GameScreen itemShieldGame = newGame(ShipType.STANDARD);
+		GameScreen itemShieldGame = newGame(ShipType.TANK);
 		makeReady(itemShieldGame, "inputDelay");
 		Ship shieldedShip = ship(itemShieldGame);
+		int itemShieldLives = itemShieldGame.getPlayerStatus().getLives();
 		shieldedShip.setShieldActive(true);
 		obstacles(itemShieldGame).add(new FallingObstacle(
 				shieldedShip.getPositionX(), shieldedShip.getPositionY()));
 		collideObstacles(itemShieldGame);
 		check(obstacles(itemShieldGame).isEmpty()
 				&& !itemShieldGame.getPlayerStatus().isSlowActive()
-				&& itemShieldGame.getPlayerStatus().getLives() == 3,
+				&& itemShieldGame.getPlayerStatus().getLives()
+						== itemShieldLives,
 				"Energy Shield consumes the obstacle without a penalty");
 	}
 
 	private static void checkEnergyShieldClearsActiveSlowExactlyOnce()
 			throws Exception {
-		GameScreen game = newGame(ShipType.STANDARD);
+		GameScreen game = newGame(ShipType.TANK);
 		makeReady(game, "inputDelay");
 		triggerObstacleSlow(game);
 		Ship ship = ship(game);
@@ -297,6 +306,173 @@ public final class FallingObstacleIntegrationTest {
 		check(countSlowEvents(unslowedEvents,
 				PlayerStatusEvent.Type.SLOW_ENDED) == 0,
 				"Energy Shield without an active slow emits no end event");
+	}
+
+	/** A newly created hazard cannot hit a ship overlapping its spawn point. */
+	private static void checkSpawnFrameDoesNotCollideWithChameleonShip()
+			throws Exception {
+		GameScreen game = newGame(ShipType.STANDARD);
+		makeReady(game, "inputDelay");
+		makeReady(game, "fallingObstacleCooldown");
+		Ship ship = ship(game);
+		ship.activateChameleonHull();
+
+		long seed = 713L;
+		Random expectedRandom = new Random(seed);
+		int expectedX = 1 + expectedRandom.nextInt(game.getWidth()
+				- FallingObstacle.WIDTH - 1);
+		((Random) read(game, "obstacleRandom")).setSeed(seed);
+		ship.setPositionX(expectedX);
+		ship.setPositionY(40);
+
+		check(updateObstacleFrame(game),
+				"The expired timer creates an obstacle on this frame");
+		FallingObstacle obstacle = obstacles(game).iterator().next();
+		check(obstacle.getPositionY() == 40,
+				"A new obstacle remains at its spawn position for its first frame");
+		check(obstacles(game).size() == 1
+				&& !game.getPlayerStatus().isSlowActive(),
+				"Spawn-frame overlap neither consumes the obstacle nor applies slow");
+
+		check(!updateObstacleFrame(game),
+				"The following frame advances the existing obstacle");
+		check(obstacles(game).isEmpty()
+				&& game.getPlayerStatus().isSlowActive(),
+				"Normal collision handling resumes on the next frame");
+	}
+
+	/** The hazard must not cover opaque ship pixels or the shield outline. */
+	private static void checkObstacleRendersBehindShipAndShield()
+			throws Exception {
+		GameScreen game = newGame(ShipType.TANK);
+		Ship ship = ship(game);
+		ship.setPositionX(150);
+		ship.setPositionY(220);
+		ship.setShieldActive(true);
+		int x = ship.getPositionX();
+		int y = ship.getPositionY();
+
+		invoke(game, "draw");
+		BufferedImage withoutObstacle = copyBackBuffer(game);
+		ship.setShieldActive(false);
+		invoke(game, "draw");
+		BufferedImage withoutShield = copyBackBuffer(game);
+		ship.setShieldActive(true);
+		obstacles(game).add(new FallingObstacle(x, y));
+		invoke(game, "draw");
+		BufferedImage withShipOverlap = copyBackBuffer(game);
+
+		Map<?, ?> sprites = (Map<?, ?>) field(
+				read(game, "drawManager").getClass(), "spriteMap")
+				.get(null);
+		boolean[][] shipSprite = (boolean[][]) sprites.get(SpriteType.Ship);
+		boolean[][] obstacleSprite = (boolean[][]) sprites.get(
+				SpriteType.FallingObstacle);
+		int shipPixelsChecked = 0;
+		for (int i = 0; i < obstacleSprite.length; i++) {
+			for (int j = 0; j < obstacleSprite[i].length; j++) {
+				if (!obstacleSprite[i][j])
+					continue;
+				int pixelX = x + i * 2;
+				int pixelY = y + j * 2;
+				if (i < shipSprite.length && j < shipSprite[i].length
+						&& shipSprite[i][j]) {
+					shipPixelsChecked++;
+					check(withShipOverlap.getRGB(pixelX, pixelY)
+							== withoutObstacle.getRGB(pixelX, pixelY),
+							"The obstacle cannot cover an overlapping ship pixel");
+				}
+			}
+		}
+		check(shipPixelsChecked > 0,
+				"The render test covers overlapping ship sprite pixels");
+
+		obstacles(game).clear();
+		int shieldOffsetX = 0;
+		int shieldOffsetY = 0;
+		int expectedShieldOverlap = 0;
+		for (int offsetX = -32; offsetX <= 32
+				&& expectedShieldOverlap == 0; offsetX++) {
+			for (int offsetY = -32; offsetY <= 32
+					&& expectedShieldOverlap == 0; offsetY++) {
+				int overlap = countShieldHaloObstaclePixels(withoutObstacle,
+						withoutShield, obstacleSprite, x + offsetX, y + offsetY,
+						x, y,
+						ship.getWidth(), ship.getHeight());
+				if (overlap > 0) {
+					shieldOffsetX = offsetX;
+					shieldOffsetY = offsetY;
+					expectedShieldOverlap = overlap;
+				}
+			}
+		}
+		check(expectedShieldOverlap > 0,
+				"The test finds obstacle pixels overlapping the shield outline");
+		obstacles(game).add(new FallingObstacle(x + shieldOffsetX,
+				y + shieldOffsetY));
+		invoke(game, "draw");
+		BufferedImage withShieldOverlap = copyBackBuffer(game);
+		check(countPreservedShieldHaloObstaclePixels(withoutObstacle,
+				withoutShield, withShieldOverlap, obstacleSprite,
+				x + shieldOffsetX, y + shieldOffsetY, x, y,
+				ship.getWidth(), ship.getHeight()) == expectedShieldOverlap,
+				"The obstacle cannot cover the overlapping shield ring");
+	}
+
+	private static int countShieldHaloObstaclePixels(
+			final BufferedImage withShield, final BufferedImage withoutShield,
+			final boolean[][] obstacleSprite, final int x, final int y,
+			final int shipX, final int shipY,
+			final int shipWidth, final int shipHeight) {
+		int count = 0;
+		for (int i = 0; i < obstacleSprite.length; i++)
+			for (int j = 0; j < obstacleSprite[i].length; j++) {
+				int pixelX = x + i * 2;
+				int pixelY = y + j * 2;
+				boolean outsideShip = pixelX < shipX
+						|| pixelX >= shipX + shipWidth
+						|| pixelY < shipY
+						|| pixelY >= shipY + shipHeight;
+				if (obstacleSprite[i][j] && outsideShip
+						&& withShield.getRGB(pixelX, pixelY)
+								!= withoutShield.getRGB(pixelX, pixelY))
+					count++;
+			}
+		return count;
+	}
+
+	private static int countPreservedShieldHaloObstaclePixels(
+			final BufferedImage baseline, final BufferedImage withoutShield,
+			final BufferedImage rendered,
+			final boolean[][] obstacleSprite, final int x, final int y,
+			final int shipX, final int shipY,
+			final int shipWidth, final int shipHeight) {
+		int count = 0;
+		for (int i = 0; i < obstacleSprite.length; i++)
+			for (int j = 0; j < obstacleSprite[i].length; j++) {
+				int pixelX = x + i * 2;
+				int pixelY = y + j * 2;
+				boolean outsideShip = pixelX < shipX
+						|| pixelX >= shipX + shipWidth
+						|| pixelY < shipY
+						|| pixelY >= shipY + shipHeight;
+				if (obstacleSprite[i][j] && outsideShip
+						&& baseline.getRGB(pixelX, pixelY)
+								!= withoutShield.getRGB(pixelX, pixelY)) {
+					count++;
+					check(rendered.getRGB(pixelX, pixelY)
+							== baseline.getRGB(pixelX, pixelY),
+							"The obstacle cannot cover the overlapping shield ring");
+				}
+			}
+		return count;
+	}
+
+	private static BufferedImage copyBackBuffer(final GameScreen game)
+			throws Exception {
+		Object manager = read(game, "drawManager");
+		return (BufferedImage) field(manager.getClass(), "backBuffer")
+				.get(null);
 	}
 
 	private static int countSlowEvents(
@@ -404,6 +580,15 @@ public final class FallingObstacleIntegrationTest {
 		invoke(game, "updateFallingObstacles");
 	}
 
+	private static boolean updateObstacleFrame(final GameScreen game)
+			throws Exception {
+		boolean spawned = ((Boolean) invokeResult(game,
+				"updateFallingObstacles")).booleanValue();
+		if (!spawned)
+			collideObstacles(game);
+		return spawned;
+	}
+
 	private static void collideObstacles(final GameScreen game)
 			throws Exception {
 		invoke(game, "manageFallingObstacleCollisions");
@@ -414,6 +599,13 @@ public final class FallingObstacleIntegrationTest {
 		Method method = target.getClass().getDeclaredMethod(name);
 		method.setAccessible(true);
 		method.invoke(target);
+	}
+
+	private static Object invokeResult(final Object target, final String name)
+			throws Exception {
+		Method method = target.getClass().getDeclaredMethod(name);
+		method.setAccessible(true);
+		return method.invoke(target);
 	}
 
 	private static Field field(Class<?> type, final String name)

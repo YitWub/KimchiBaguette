@@ -8,9 +8,12 @@ reaches `main`.
 
 ### Why GitHub Flow fits this project
 
-- **`main` must always be runnable.** This repository has no automated test
-  suite, so we verify a change by building and running `engine.Core` by hand.
-  Keeping one always-working branch makes that verification meaningful.
+- **`main` must always be runnable.** There are 17 test classes under
+  `tests/`, but they are plain `main` methods run by hand rather than a JUnit
+  suite on CI, and they cover calculations rather than whole systems. Nothing
+  runs them for us when a branch is pushed, so we still verify a change by
+  building and running `engine.Core`. Keeping one always-working branch makes
+  that verification meaningful.
 - **Code review is our only quality gate.** Because there are no tests to catch
   regressions, the mandatory PR review is what protects `main`. GitHub Flow puts
   that review at the centre of the process rather than treating it as optional.
@@ -37,7 +40,7 @@ reaches `main`.
 | **Forking Workflow** | Each member would work in a personal fork and open cross-fork PRs, which means every member maintains an extra remote and keeps it in sync. All nine of us already have write access to the team repository, so the extra layer buys us nothing and is a common source of confusion for members new to Git. A plain branch in one shared repository is simpler. |
 | **Gitflow** | It adds `develop`, `release`, `hotfix` and `support` branches on top of feature branches. We ship no versioned releases and run nothing in production during one semester, so there is no release to stabilize and no hotfix to back-port. Five long-lived branch types would be pure ceremony. |
 | **GitLab Flow** | It layers environment or release branches (staging, production) on top of GitHub Flow. The game runs locally from IntelliJ and we have no deployment environments, so those branches would always be empty. |
-| **Trunk-Based Development** | It expects every developer to merge into the trunk at least daily, usually behind feature flags, and it depends on strong automated tests to keep the trunk green. We have no test suite to catch a broken trunk, and our members are split between France and Korea with different class schedules, so a daily merge cadence is not realistic. |
+| **Trunk-Based Development** | It expects every developer to merge into the trunk at least daily, usually behind feature flags, and it depends on strong automated tests to keep the trunk green. Nothing runs our test classes automatically, so nothing would catch a broken trunk, and our members are split between France and Korea with different class schedules, so a daily merge cadence is not realistic. |
 | **Hierarchical Integration** | Changes pass through lieutenants before reaching a maintainer. It is built for very large numbers of contributors who do not know each other. With nine teammates it would only add waiting time and make the integrator a bottleneck. |
 
 ### Repositories

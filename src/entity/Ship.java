@@ -478,7 +478,18 @@ public class Ship extends Entity {
         return this.isShieldActive;
     }
 
+    /**
+     * Turns the Energy Shield on or off. A ship that is not shield-capable
+     * ignores a request to turn it on, so any item or buff that raises the
+     * shield through here follows the same rule (R1). Turning it off always
+     * works.
+     *
+     * @param active
+     *            Whether the Energy Shield should be up.
+     */
     public void setShieldActive(final boolean active) {
+        if (active && !this.shipType.isShieldCapable())
+            return;
         this.isShieldActive = active;
     }
 

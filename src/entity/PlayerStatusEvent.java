@@ -63,19 +63,16 @@ public final class PlayerStatusEvent implements GameplayEvent {
 
 	private PlayerStatusEvent(final Type type, final PlayerStatus status,
 			final int damageAmount) {
-		this(type, status, damageAmount, false, 0);
-	}
-
-	private PlayerStatusEvent(final Type type, final PlayerStatus status,
-			final int damageAmount, final boolean slowActive,
-			final int slowRemainingMillis) {
 		this.type = type;
 		this.lives = status.getLives();
 		this.maxLives = status.getMaxLives();
 		this.shieldRemainingMillis = status.getShieldRemainingMillis();
 		this.damageAmount = damageAmount;
-		this.slowActive = slowActive;
-		this.slowRemainingMillis = slowRemainingMillis;
+		long now = status.currentTimeMillis();
+		this.slowActive = type != Type.SLOW_ENDED
+				&& status.isSlowActiveAt(now);
+		this.slowRemainingMillis = this.slowActive
+				? status.getSlowRemainingMillisAt(now) : 0;
 	}
 
 	static PlayerStatusEvent damageTaken(final PlayerStatus status,
@@ -113,13 +110,12 @@ public final class PlayerStatusEvent implements GameplayEvent {
 	}
 
 	static PlayerStatusEvent slowEnded(final PlayerStatus status) {
-		return new PlayerStatusEvent(Type.SLOW_ENDED, status, 0, false, 0);
+		return new PlayerStatusEvent(Type.SLOW_ENDED, status, 0);
 	}
 
 	private static PlayerStatusEvent slowEvent(final Type type,
 			final PlayerStatus status) {
-		return new PlayerStatusEvent(type, status, 0, true,
-				status.getSlowRemainingMillis());
+		return new PlayerStatusEvent(type, status, 0);
 	}
 
 	public Type getType() {
@@ -154,8 +150,8 @@ public final class PlayerStatusEvent implements GameplayEvent {
 	}
 
 	/**
-	 * @return Whether slow was active when this event was created. This is
-	 *         {@code false} for the existing non-slow event types.
+	 * @return Whether slow was active when this event was created, regardless
+	 *         of the event type. Always false for {@link Type#SLOW_ENDED}.
 	 */
 	public boolean isSlowActive() {
 		return this.slowActive;
@@ -163,7 +159,7 @@ public final class PlayerStatusEvent implements GameplayEvent {
 
 	/**
 	 * @return Slow time left at this event's snapshot, in milliseconds, or zero
-	 *         for an ended slow and the existing non-slow event types.
+	 *         when slow was inactive or had ended.
 	 */
 	public int getSlowRemainingMillis() {
 		return this.slowRemainingMillis;

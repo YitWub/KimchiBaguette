@@ -46,6 +46,13 @@ public class PlayerStatus {
 	 */
 	private long shieldExpiryTime;
 	/**
+	 * Whether the selected ship may hold a shield. Ships that cannot are
+	 * refused by {@link #activateShield()}. This covers only the timed shield
+	 * held here; the Energy Shield item lives on {@link Ship} and is guarded
+	 * separately in {@link Ship#setShieldActive(boolean)}.
+	 */
+	private final boolean shieldCapable;
+	/**
 	 * Whether a shield was up the last time the clock was looked at. Keeps
 	 * {@link PlayerStatusEvent.Type#SHIELD_ENDED} to one event per shield,
 	 * since nothing counts the shield down frame by frame.
@@ -68,7 +75,10 @@ public class PlayerStatus {
 			new ArrayList<PlayerStatusListener>();
 
 	/**
-	 * Creates a valid player-life state.
+	 * Creates a valid player-life state for a ship that cannot hold a
+	 * shield. A ship has to be declared shield-capable explicitly with
+	 * {@link #PlayerStatus(int, int, boolean)}, so a caller that forgets the
+	 * capability never hands every ship a shield.
 	 *
 	 * @param initialLives
 	 *            Initial number of lives.
@@ -76,6 +86,23 @@ public class PlayerStatus {
 	 *            Maximum number of lives.
 	 */
 	public PlayerStatus(final int initialLives, final int maxLives) {
+		this(initialLives, maxLives, false);
+	}
+
+	/**
+	 * Creates a valid player-life state for a ship that may or may not be
+	 * allowed to hold a shield.
+	 *
+	 * @param initialLives
+	 *            Initial number of lives.
+	 * @param maxLives
+	 *            Maximum number of lives.
+	 * @param shieldCapable
+	 *            Whether the selected ship may hold a shield at all.
+	 */
+	public PlayerStatus(final int initialLives, final int maxLives,
+			final boolean shieldCapable) {
+		this.shieldCapable = shieldCapable;
 		if (maxLives <= 0)
 			throw new IllegalArgumentException(
 					"Maximum lives must be positive.");
@@ -187,17 +214,21 @@ public class PlayerStatus {
 	 * @return Milliseconds remaining, or zero when inactive.
 	 */
 	public final int getSlowRemainingMillis() {
-		long now = currentTimeMillis();
-		if (!isSlowActiveAt(now))
-			return 0;
-		return (int) (this.slowExpiryTime - now);
+		return getSlowRemainingMillisAt(currentTimeMillis());
 	}
 
 	/** Checks the logical slow state without mutating it or publishing events. */
-	private boolean isSlowActiveAt(final long now) {
-		return this.slowedShip != null && this.lives > 0
-				&& this.shieldExpiryTime <= now
+	final boolean isSlowActiveAt(final long now) {
+		return this.slowedShip != null && isAlive()
+				&& !isShieldActiveAt(now)
 				&& now < this.slowExpiryTime;
+	}
+
+	/** Returns remaining slow time using the same instant as the state check. */
+	final int getSlowRemainingMillisAt(final long now) {
+		if (!isSlowActiveAt(now))
+			return 0;
+		return (int) (this.slowExpiryTime - now);
 	}
 
 	/** Ends the active movement-only slow, if one is present. */
@@ -347,7 +378,10 @@ public class PlayerStatus {
 	 * no damage until it expires. A refresh is announced as its own kind of
 	 * event, so the HUD can restart a gauge rather than start a second one.
 	 */
-	public final void activateShield() {
+	public final boolean activateShield() {
+		if (!this.shieldCapable)
+			return false;
+
 		announceExpiredShield();
 
 		boolean refreshed = isShieldActive();
@@ -355,6 +389,16 @@ public class PlayerStatus {
 		this.shieldAnnounced = true;
 		publish(refreshed ? PlayerStatusEvent.shieldRefreshed(this)
 				: PlayerStatusEvent.shieldStarted(this));
+		return true;
+	}
+
+	/**
+	 * Reports whether the selected ship may hold a shield at all.
+	 *
+	 * @return True if a shield can be raised.
+	 */
+	public final boolean isShieldCapable() {
+		return this.shieldCapable;
 	}
 
 	/**
@@ -381,7 +425,12 @@ public class PlayerStatus {
 
 	/** @return Whether a shield is currently absorbing damage. */
 	public final boolean isShieldActive() {
-		return getShieldRemainingMillis() > 0;
+		return isShieldActiveAt(currentTimeMillis());
+	}
+
+	/** Checks shield activity at a caller-supplied instant without side effects. */
+	final boolean isShieldActiveAt(final long now) {
+		return this.shieldExpiryTime > now;
 	}
 
 	/**

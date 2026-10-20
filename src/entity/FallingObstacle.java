@@ -24,7 +24,8 @@ public final class FallingObstacle extends Entity {
 
 	/**
 	 * @param screenHeight Bottom edge of the screen.
-	 * @return Whether the obstacle has completely left the visible screen.
+	 * @return Whether the obstacle's top edge has reached or passed the bottom
+	 *         edge of the screen.
 	 */
 	public boolean hasLeftScreen(final int screenHeight) {
 		return this.positionY >= screenHeight;
