@@ -52,16 +52,13 @@ and does so every time only one is left in the bottom row — and an enemy bulle
 travels at an angle towards the player instead of vertically.
 
 **R3. Enemy ships with distinct movement trajectories.**
-At least two movement patterns in addition to the baseline formation sweep, each
-carrying its pace in its own way. The diagonal pattern holds the interval between steps
-deliberately fixed so that its path reads as a line rather than a series of jumps; its
-pace is carried by the step length, which grows on the harder stage settings and as
-enemies are defeated. The wave pattern and the baseline sweep do the reverse: their step
-length is fixed and the interval between steps shortens, so they speed up by stepping
-more often rather than by stepping further.
+At least two movement patterns in addition to the baseline formation sweep. The interval
+between steps is deliberately fixed so that a path reads as a line rather than a series
+of jumps; the pace is carried by the step length, which grows on the harder stage
+settings and as enemies are defeated.
 *Complete when* two formations of the same size visibly follow different paths, and a
 formation visibly covers more ground per second on a later stage and as it is thinned
-out, with the diagonal pattern lengthening its step instead of breaking into jumps.
+out, without its motion breaking into jumps.
 
 **R4. Bosses with difficulty levels and varied projectile attacks.**
 Two boss types (1000 HP slow, 800 HP fast), each with three phases driven by remaining
