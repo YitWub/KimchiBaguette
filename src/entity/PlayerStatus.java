@@ -47,8 +47,9 @@ public class PlayerStatus {
 	private long shieldExpiryTime;
 	/**
 	 * Whether the selected ship may hold a shield. Ships that cannot are
-	 * refused by {@link #activateShield()}, so the rule holds wherever a
-	 * shield is granted from rather than at each call site.
+	 * refused by {@link #activateShield()}. This covers only the timed shield
+	 * held here; the Energy Shield item lives on {@link Ship} and is guarded
+	 * separately in {@link Ship#setShieldActive(boolean)}.
 	 */
 	private final boolean shieldCapable;
 	/**
@@ -74,7 +75,10 @@ public class PlayerStatus {
 			new ArrayList<PlayerStatusListener>();
 
 	/**
-	 * Creates a valid player-life state.
+	 * Creates a valid player-life state for a ship that cannot hold a
+	 * shield. A ship has to be declared shield-capable explicitly with
+	 * {@link #PlayerStatus(int, int, boolean)}, so a caller that forgets the
+	 * capability never hands every ship a shield.
 	 *
 	 * @param initialLives
 	 *            Initial number of lives.
@@ -82,7 +86,7 @@ public class PlayerStatus {
 	 *            Maximum number of lives.
 	 */
 	public PlayerStatus(final int initialLives, final int maxLives) {
-		this(initialLives, maxLives, true);
+		this(initialLives, maxLives, false);
 	}
 
 	/**

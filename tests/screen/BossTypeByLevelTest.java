@@ -24,16 +24,23 @@ public final class BossTypeByLevelTest {
 		System.out.println("Boss type by level checks passed.");
 	}
 
+	/**
+	 * Read from GameScreen.BOSS_LEVELS rather than hardcoded, so the test
+	 * follows the boss stages if the team changes them.
+	 */
 	private static void checkTheFirstBossStageOpensWithTheSlowBoss() {
-		check(GameScreen.bossTypeForLevel(3) == Boss.BossType.BOSS_A,
-				"Stage 3 opens the run with the slow boss");
+		int first = GameScreen.firstBossLevel();
+		check(GameScreen.bossTypeForLevel(first) == Boss.BossType.BOSS_A,
+				"The first boss stage (" + first + ") uses the slow boss");
 	}
 
 	private static void checkLaterBossStagesUseTheFastBoss() {
-		check(GameScreen.bossTypeForLevel(5) == Boss.BossType.BOSS_B,
-				"Stage 5 uses the fast boss");
-		check(GameScreen.bossTypeForLevel(7) == Boss.BossType.BOSS_B,
-				"Stage 7 uses the fast boss");
+		int first = GameScreen.firstBossLevel();
+		for (int level : GameScreen.BOSS_LEVELS)
+			if (level != first)
+				check(GameScreen.bossTypeForLevel(level)
+						== Boss.BossType.BOSS_B,
+						"Boss stage " + level + " uses the fast boss");
 	}
 
 	/**

@@ -50,7 +50,8 @@ public final class PlayerDamagePathTest {
 	 * this check entirely.
 	 */
 	private static void checkEnergyShieldStopsBossDamage() throws Exception {
-		GameScreen game = newGame();
+		// Only a shield-capable ship can hold the Energy Shield.
+		GameScreen game = newGame(ShipType.TANK);
 		PlayerStatus status = statusOf(game);
 		shipOf(game).setShieldActive(true);
 

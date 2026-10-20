@@ -7,7 +7,7 @@ public final class PlayerStatusSlowDebuffTest {
 		private long now = 1000000L;
 
 		private FakeClockStatus(final int lives, final int maxLives) {
-			super(lives, maxLives);
+			super(lives, maxLives, true);
 		}
 
 		@Override

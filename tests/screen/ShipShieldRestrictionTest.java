@@ -27,8 +27,9 @@ public final class ShipShieldRestrictionTest {
 	public static void main(final String[] args) throws Exception {
 		checkOnlyTheTankIsShieldCapable();
 		checkSelectedShipDecidesWhetherAShieldCanBeRaised();
-		checkStatusWithoutAStatedCapabilityStillAllowsShields();
+		checkStatusWithoutAStatedCapabilityRefusesShields();
 		checkShieldItemOnlyWorksOnAShieldCapableShip();
+		checkShipRefusesAShieldItCannotHold();
 
 		System.out.println("Ship shield restriction checks passed.");
 	}
@@ -62,15 +63,14 @@ public final class ShipShieldRestrictionTest {
 	}
 
 	/**
-	 * The two-argument constructor is used by the other harnesses and by any
-	 * caller that does not care about ship types, so it must keep allowing
-	 * shields.
+	 * The two-argument constructor fails closed: a caller that does not state
+	 * the capability must not hand every ship a shield.
 	 */
-	private static void checkStatusWithoutAStatedCapabilityStillAllowsShields() {
+	private static void checkStatusWithoutAStatedCapabilityRefusesShields() {
 		PlayerStatus status = new PlayerStatus(3, 3);
-		check(status.isShieldCapable(),
-				"A status built without a stated capability can hold a shield");
-		check(status.activateShield(), "and raises one when asked");
+		check(!status.isShieldCapable(),
+				"A status built without a stated capability cannot hold a shield");
+		check(!status.activateShield(), "and refuses one when asked");
 	}
 
 	/**
@@ -93,6 +93,23 @@ public final class ShipShieldRestrictionTest {
 		new ShieldItem(0, 0).applyEffect(speedster);
 		check(!speedster.isShieldActive(),
 				"The Energy Shield item does nothing on the Speedster");
+	}
+
+	/**
+	 * The guard sits in Ship.setShieldActive itself, so a future item or
+	 * buff that raises the Energy Shield cannot get round the rule.
+	 */
+	private static void checkShipRefusesAShieldItCannotHold() {
+		Ship standard = new Ship(100, 100, ShipType.STANDARD);
+		standard.setShieldActive(true);
+		check(!standard.isShieldActive(),
+				"Ship.setShieldActive(true) is ignored on the Standard Ship");
+
+		Ship tank = new Ship(100, 100, ShipType.TANK);
+		tank.setShieldActive(true);
+		check(tank.isShieldActive(), "The Heavy Tank can raise it");
+		tank.setShieldActive(false);
+		check(!tank.isShieldActive(), "and turning it off always works");
 	}
 
 	private static PlayerStatus statusFor(final ShipType shipType)
