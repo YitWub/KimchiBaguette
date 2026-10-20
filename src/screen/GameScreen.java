@@ -1008,13 +1008,6 @@ public class GameScreen extends Screen {
 	}
 
 	/**
-	 * Checks if a boss appears in the given stage.
-	 *
-	 * @param level
-	 *            Stage number, starting at 1.
-	 * @return True if the stage is a boss stage.
-	 */
-	/**
 	 * Picks the boss for a stage. The slow boss opens the run; the faster
 	 * one, which reaches its stronger phases earlier, takes the later boss
 	 * stages, so the two differ in more than their health bar.
@@ -1028,6 +1021,13 @@ public class GameScreen extends Screen {
 				: Boss.BossType.BOSS_B;
 	}
 
+	/**
+	 * Checks if a boss appears in the given stage.
+	 *
+	 * @param level
+	 *            Stage number, starting at 1.
+	 * @return True if the stage is a boss stage.
+	 */
 	private static boolean isBossLevel(final int level) {
 		for (int bossLevel : BOSS_LEVELS)
 			if (bossLevel == level)

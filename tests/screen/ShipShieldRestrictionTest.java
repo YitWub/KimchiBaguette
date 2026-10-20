@@ -5,7 +5,9 @@ import java.lang.reflect.Field;
 import engine.GameSettings;
 import engine.GameState;
 import entity.PlayerStatus;
+import entity.Ship;
 import entity.ShipType;
+import entity.item.ShieldItem;
 
 /**
  * Standalone checks for the part of R1 that says only a shield-capable ship
@@ -26,6 +28,7 @@ public final class ShipShieldRestrictionTest {
 		checkOnlyTheTankIsShieldCapable();
 		checkSelectedShipDecidesWhetherAShieldCanBeRaised();
 		checkStatusWithoutAStatedCapabilityStillAllowsShields();
+		checkShieldItemOnlyWorksOnAShieldCapableShip();
 
 		System.out.println("Ship shield restriction checks passed.");
 	}
@@ -68,6 +71,28 @@ public final class ShipShieldRestrictionTest {
 		check(status.isShieldCapable(),
 				"A status built without a stated capability can hold a shield");
 		check(status.activateShield(), "and raises one when asked");
+	}
+
+	/**
+	 * The Energy Shield item is the shield players actually pick up in play,
+	 * and it sets the shield on Ship directly rather than through
+	 * PlayerStatus, so it has to honour the same rule.
+	 */
+	private static void checkShieldItemOnlyWorksOnAShieldCapableShip() {
+		Ship tank = new Ship(100, 100, ShipType.TANK);
+		new ShieldItem(0, 0).applyEffect(tank);
+		check(tank.isShieldActive(),
+				"The Energy Shield item works on the Heavy Tank");
+
+		Ship standard = new Ship(100, 100, ShipType.STANDARD);
+		new ShieldItem(0, 0).applyEffect(standard);
+		check(!standard.isShieldActive(),
+				"The Energy Shield item does nothing on the Standard Ship");
+
+		Ship speedster = new Ship(100, 100, ShipType.SPEEDSTER);
+		new ShieldItem(0, 0).applyEffect(speedster);
+		check(!speedster.isShieldActive(),
+				"The Energy Shield item does nothing on the Speedster");
 	}
 
 	private static PlayerStatus statusFor(final ShipType shipType)

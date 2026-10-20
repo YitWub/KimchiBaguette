@@ -21,7 +21,8 @@ public class ShieldItem extends Item {
 
     @Override
     public void applyEffect(final Ship ship) {
-        if (ship != null) {
+        // Only a shield-capable ship may hold a shield (R1).
+        if (ship != null && ship.getShipType().isShieldCapable()) {
             ship.setShieldActive(true);
             System.out.println("[ITEM] Energy Shield activé pour 15 secondes !");
         }
