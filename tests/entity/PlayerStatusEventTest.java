@@ -16,7 +16,7 @@ public final class PlayerStatusEventTest {
 		private long now;
 
 		private FakeClockStatus(final int initialLives, final int maxLives) {
-			super(initialLives, maxLives);
+			super(initialLives, maxLives, true);
 			this.now = 1000000L;
 		}
 

@@ -107,14 +107,17 @@ public final class GameplayIntegrationTest {
     private static void campaign(RecordsService service, String path) throws Exception {
         service.startRun(path);
         GameScreen game = new GameScreen(new GameState(7,0,3,0,0),
-                new GameSettings(1,1,1000,10000),false,448,520,60,new RunSession(path));
+                new GameSettings(1,1,1000,10000),false,448,520,60,
+                // Heavy Tank: the shield-absorption check below needs a ship
+                // that can hold the Energy Shield.
+                ShipType.TANK,new RunSession(path));
         game.initialize(); set(game,"inputDelay",Core.getCooldown(0));
         Ship player = (Ship)get(game,"ship");
         EnemyShipFormation formation = (EnemyShipFormation)get(game,"enemyShipFormation");
         EnemyShip normal = formation.iterator().next();
         normal.setPositionX(player.getPositionX()); normal.setPositionY(150);
         EnemyShip special = new EnemyShip(); special.setPositionX(player.getPositionX()); special.setPositionY(80);
-        set(game,"enemyShipSpecial",special);
+        set(get(game,"bonusEnemyManager"),"bonusShip",special);
         List<String> events = new ArrayList<String>();
         game.getGameplayEvents().subscribe(event.EnemyDefeatedEvent.class, e -> events.add(e.getEventId()));
         player.setShieldActive(true);
