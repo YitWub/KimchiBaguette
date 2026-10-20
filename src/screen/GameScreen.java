@@ -18,6 +18,8 @@ import engine.GameSettings;
 import engine.GameState;
 import engine.ControlsConfig;
 import entity.Bullet;
+import boss.BossEvent;
+import boss.BossEventListener;
 import boss.BossManager;
 import boss.BossSpawnRequest;
 import boss.BossStatus;
@@ -79,6 +81,12 @@ public class GameScreen extends Screen {
 	private static final int BOSS_DAMAGE_PER_SHOT = 50;
 	/** Time the boss explosion stays on screen. */
 	private static final int BOSS_EXPLOSION_TIME = 500;
+	/** Sound played as the warning before a boss special attack. */
+	private static final String BOSS_WARNING_SOUND =
+			"audio/sfx/item_laser_charge.wav";
+	/** Sound played when a boss special attack fires. */
+	private static final String BOSS_SPECIAL_SOUND =
+			"audio/sfx/item_laser_beam.wav";
 	/** Stages where a boss appears (agreed with the team, may change). */
 	static final int[] BOSS_LEVELS = { 3, 5, 7 };
     /** Time the space key must be held to trigger the Annihilator. */
@@ -376,9 +384,19 @@ public class GameScreen extends Screen {
 
 		this.bossBullets = new HashSet<BossBullet>();
 		this.bossManager = new BossManager();
-		// Logs boss events until HUD and Visual Effect listeners are added.
+		// Logs boss events for debugging.
 		this.bossManager.getEventManager().addListener(
 				new LoggingBossEventListener());
+		// Boss events also go onto the shared gameplay bus, so Sound,
+		// Currency and Records can subscribe to BossEvent.class there, and
+		// drive the effects, sounds and records handled on this screen.
+		this.bossManager.getEventManager().addListener(
+				new BossEventListener() {
+			public void onBossEvent(final BossEvent event) {
+				recordsEvents.publish(event);
+				handleBossEvent(event);
+			}
+		});
 		// Same for the player's own status events.
 		this.playerStatus.addListener(new LoggingPlayerStatusListener());
 		// Forward them onto the shared gameplay bus as well, so a system that
@@ -1093,6 +1111,44 @@ public class GameScreen extends Screen {
         else if (countdown <= 3)
             AudioManager.playSFX("audio/sfx/countdown_beep.wav");
     }
+
+	/**
+	 * Plays the effects and sounds of a boss event and records the boss
+	 * defeat (PRD 5.3, 5.4).
+	 *
+	 * @param event
+	 *            Boss event.
+	 */
+	private void handleBossEvent(final BossEvent event) {
+		switch (event.getType()) {
+		case ATTACK:
+			if (event.isSpecial())
+				AudioManager.playSFX(event.isWindup()
+						? BOSS_WARNING_SOUND : BOSS_SPECIAL_SOUND);
+			break;
+		case DEFEATED:
+			// Three explosions across the boss, as it is bigger than an enemy.
+			for (int i = -1; i <= 1; i++)
+				this.particleSystem.spawnEnemyExplosion(
+						event.getPositionX() + i * Boss.WIDTH / 3,
+						event.getPositionY());
+			recordBossDefeat();
+			break;
+		default:
+			break;
+		}
+	}
+
+	/**
+	 * Counts the boss as a defeated enemy in the run records. The boss
+	 * manager sends BossDefeated only once, so one id per boss is enough.
+	 */
+	private void recordBossDefeat() {
+		if (this.runSession == null)
+			return;
+		this.recordsEvents.publish(new EnemyDefeatedEvent(
+				this.runSession.getRunId(), UUID.randomUUID().toString()));
+	}
 
     private void recordEnemyDefeat(final EnemyShip enemy) {
         if (this.runSession == null) return;
