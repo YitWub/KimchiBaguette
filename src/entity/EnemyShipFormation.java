@@ -74,6 +74,23 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	private int waveBaseY;
     /** Horizontal and vertical speed of the diagonal movement. */
     private static final int DIAGONAL_SPEED = 4;
+    /**
+     * Frames between diagonal steps at the reference pace below. Small, so
+     * the path reads as a line rather than a jump.
+     */
+    private static final int DIAGONAL_INTERVAL = 2;
+    /**
+     * Largest diagonal step. Without it a nearly cleared formation would
+     * jump far enough in one step to read as a teleport.
+     */
+    private static final int DIAGONAL_MAX_SPEED = 16;
+    /**
+     * The movementSpeed a full formation has on the opening stage, which is
+     * the pace the diagonal pattern was tuned at. The delay is anchored to
+     * it so that stage one plays exactly as before, while a harder stage or
+     * a thinned-out formation still changes it.
+     */
+    private static final int DIAGONAL_REFERENCE_SPEED = 70;
     /** Current segment of the diamond loop (0 to 3). */
     private int diagonalPhase = 0;
     /** Initial vertical position of the diamond loop. */
@@ -249,7 +266,27 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
      *
      * @return Movement on the X and Y axes.
      */
+    /**
+     * Distance the diagonal pattern covers in one step. The delay between
+     * steps is kept short so the path stays smooth, so the step itself is
+     * what carries the speed: it grows as movementSpeed falls, which is how
+     * the stage setting and the speed-up as enemies are defeated reach this
+     * pattern. The fixed step it used before ignored both.
+     *
+     * <p>Anchored so that a full formation on the opening stage keeps the
+     * step of {@link #DIAGONAL_SPEED} it has today, and capped so a nearly
+     * cleared formation does not jump across the screen.</p>
+     *
+     * @return Step length in pixels.
+     */
+    private int diagonalStep() {
+        int scaled = DIAGONAL_SPEED * DIAGONAL_REFERENCE_SPEED
+                / Math.max(1, this.movementSpeed);
+        return Math.max(1, Math.min(DIAGONAL_MAX_SPEED, scaled));
+    }
+
     private int[] moveDiagonalBounce() {
+        final int step = diagonalStep();
         int minX = SIDE_MARGIN;
         int maxX = screen.getWidth() - SIDE_MARGIN - this.width;
         int minY = Math.max(0, this.diagonalBaseY);
@@ -293,7 +330,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
         int movementX;
         int movementY;
 
-        if (distance <= DIAGONAL_SPEED) {
+        if (distance <= step) {
             movementX = dx;
             movementY = dy;
 
@@ -301,9 +338,9 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
             this.diagonalPhase = (this.diagonalPhase + 1) % 4;
         } else {
             movementX = (int) Math.round(
-                    dx / distance * DIAGONAL_SPEED);
+                    dx / distance * step);
             movementY = (int) Math.round(
-                    dy / distance * DIAGONAL_SPEED);
+                    dy / distance * step);
         }
 
         // Keep the formation inside the screen.
@@ -371,15 +408,14 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 
         int movementDelay = this.movementSpeed;
 
-        // The diagonal path takes smaller steps than the classic sweep, so
-        // that it reads as a line rather than a jump. The delay is scaled by
-        // the same ratio instead of being fixed, so the formation still
-        // covers ground at the rate the stage settings ask for and still
-        // speeds up as enemies are defeated. A fixed delay threw away both,
-        // because movementSpeed is what carries them.
+        // The diagonal pattern used a delay of two, which threw away
+        // movementSpeed and with it the stage setting and the speed-up as
+        // enemies are defeated. The delay is derived from movementSpeed
+        // now, anchored so that a full formation on the opening stage keeps
+        // the delay of two it has today: this fixes what the delay ignored
+        // without changing how the game already plays.
         if (this.movementPattern == MovementPattern.DIAGONAL_BOUNCE) {
-            movementDelay = Math.max(1,
-                    this.movementSpeed * DIAGONAL_SPEED / X_SPEED);
+            movementDelay = DIAGONAL_INTERVAL;
         }
 
         if (movementInterval >= movementDelay) {

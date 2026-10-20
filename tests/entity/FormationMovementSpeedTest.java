@@ -8,11 +8,26 @@ import engine.GameState;
 import screen.GameScreen;
 
 /**
- * Standalone checks that every movement pattern still obeys the stage's
- * speed setting and still speeds up as enemies are defeated. The diagonal
- * pattern used a delay of its own, which threw both away.
+ * Standalone checks that the formation's pace follows the stage setting and
+ * the number of enemies left, and that it still starts at the pace the game
+ * has today. The diagonal pattern used a fixed delay and a fixed step, so it
+ * answered to neither.
+ *
+ * <p>The checks are on measured pixels per frame rather than on the ordering
+ * alone: an earlier version of this harness compared two cases and passed
+ * even with the whole diagonal branch deleted, because any delay derived
+ * from movementSpeed satisfied it.</p>
  */
 public final class FormationMovementSpeedTest {
+
+	/** Pace of a full formation on the opening stage, in pixels per frame. */
+	private static final double REFERENCE_PACE = 2.122;
+	/** How far a measurement may drift before it counts as a change. */
+	private static final double TOLERANCE = 0.05;
+	/** Frames to average a measurement over. */
+	private static final int SAMPLE_FRAMES = 600;
+	/** DIAGONAL_MAX_SPEED / DIAGONAL_INTERVAL, the fastest the pattern goes. */
+	private static final double MAXIMUM_PACE = 16.0 / 2.0;
 
 	private FormationMovementSpeedTest() {
 	}
@@ -23,73 +38,112 @@ public final class FormationMovementSpeedTest {
 	}
 
 	public static void main(final String[] args) throws Exception {
+		checkOpeningStageKeepsThePaceItHasToday();
 		checkStageSettingChangesThePace();
 		checkFormationSpeedsUpAsEnemiesAreDefeated();
+		checkPaceIsCapped();
 
 		System.out.println("Formation movement speed checks passed.");
 	}
 
 	/**
-	 * A stage configured to move slowly must move slowly. The base speed is
-	 * the frame delay between steps, so a larger one means fewer steps.
+	 * The anchor. Making the pattern obey the settings must not change how
+	 * the first stage already plays, so this pins the measured pace rather
+	 * than only its direction.
 	 */
-	private static void checkStageSettingChangesThePace() throws Exception {
-		int slow = framesPerStep(90);
-		int fast = framesPerStep(20);
+	private static void checkOpeningStageKeepsThePaceItHasToday()
+			throws Exception {
+		double pace = pace(60, 0);
+		check(Math.abs(pace - REFERENCE_PACE) < TOLERANCE,
+				"A full formation on the opening stage keeps its pace of "
+						+ REFERENCE_PACE + " px/frame (measured " + pace + ")");
+	}
 
-		check(slow > fast,
-				"A higher base speed setting means a longer delay between "
-						+ "steps, so the stage setting still reaches the "
-						+ "movement (slow=" + slow + ", fast=" + fast + ")");
+	/** A stage configured to move slowly must actually move slowly. */
+	private static void checkStageSettingChangesThePace() throws Exception {
+		double slowest = pace(140, 0);
+		double slow = pace(90, 0);
+		double reference = pace(60, 0);
+		double fast = pace(20, 0);
+
+		check(slowest < slow && slow < reference && reference < fast,
+				"The pace rises as the base speed setting falls (" + slowest
+						+ " < " + slow + " < " + reference + " < " + fast
+						+ ")");
+		check(slowest < reference / 2,
+				"A much slower stage is markedly slower, not a rounding "
+						+ "difference (" + slowest + " vs " + reference + ")");
+	}
+
+	/** The formation accelerates as it is thinned out. */
+	private static void checkFormationSpeedsUpAsEnemiesAreDefeated()
+			throws Exception {
+		double full = pace(60, 0);
+		double half = pace(60, 50);
+		double nearlyCleared = pace(60, 90);
+
+		check(full < half && half < nearlyCleared,
+				"The pace rises as enemies are defeated (" + full + " < "
+						+ half + " < " + nearlyCleared + ")");
+		check(nearlyCleared > full * 3,
+				"A nearly cleared formation is markedly faster (" + full
+						+ " to " + nearlyCleared + ")");
+	}
+
+	/** A nearly cleared formation must not jump across the screen. */
+	private static void checkPaceIsCapped() throws Exception {
+		double fastest = pace(20, 90);
+		check(fastest <= MAXIMUM_PACE,
+				"The pace stays within its cap of " + MAXIMUM_PACE
+						+ " px/frame (measured " + fastest + ")");
 	}
 
 	/**
-	 * The formation accelerates as it is thinned out. With a fixed delay it
-	 * ran at one pace from the first enemy to the last.
+	 * Measures how far the formation travels per frame, averaged over a
+	 * sample long enough to cover several steps.
+	 *
+	 * @param baseSpeed
+	 *            Base speed the stage is configured with.
+	 * @param killedPercent
+	 *            Share of the formation destroyed before measuring.
+	 * @return Pixels travelled per frame.
 	 */
-	private static void checkFormationSpeedsUpAsEnemiesAreDefeated()
+	private static double pace(final int baseSpeed, final int killedPercent)
 			throws Exception {
-		EnemyShipFormation full = formation(60);
-		int atFullStrength = framesPerStep(full);
+		EnemyShipFormation formation = formation(baseSpeed);
+		destroyShare(formation, killedPercent);
 
-		EnemyShipFormation thinned = formation(60);
-		destroyAllButOne(thinned);
-		int nearlyCleared = framesPerStep(thinned);
+		int lastX = readInt(formation, "positionX");
+		int lastY = readInt(formation, "positionY");
+		double travelled = 0;
 
-		check(nearlyCleared < atFullStrength,
-				"The formation moves more often once enemies are defeated "
-						+ "(full=" + atFullStrength + ", thinned="
-						+ nearlyCleared + ")");
-	}
-
-	/** Counts the frames a formation takes to move once. */
-	private static int framesPerStep(final int baseSpeed) throws Exception {
-		return framesPerStep(formation(baseSpeed));
-	}
-
-	private static int framesPerStep(final EnemyShipFormation formation)
-			throws Exception {
-		int startX = readInt(formation, "positionX");
-		int startY = readInt(formation, "positionY");
-
-		for (int frame = 1; frame <= 2000; frame++) {
+		for (int frame = 0; frame < SAMPLE_FRAMES; frame++) {
 			formation.update();
-			if (readInt(formation, "positionX") != startX
-					|| readInt(formation, "positionY") != startY)
-				return frame;
+			int x = readInt(formation, "positionX");
+			int y = readInt(formation, "positionY");
+			travelled += Math.hypot(x - lastX, y - lastY);
+			lastX = x;
+			lastY = y;
 		}
-		throw new AssertionError("The formation never moved");
+		return travelled / SAMPLE_FRAMES;
 	}
 
-	/** Leaves one enemy alive, so the acceleration is at its strongest. */
-	private static void destroyAllButOne(final EnemyShipFormation formation) {
-		Iterator<EnemyShip> iterator = formation.iterator();
-		EnemyShip spared = iterator.next();
-		while (iterator.hasNext()) {
-			EnemyShip enemy = iterator.next();
-			if (enemy != spared)
-				formation.destroy(enemy);
+	private static void destroyShare(final EnemyShipFormation formation,
+			final int killedPercent) {
+		if (killedPercent <= 0)
+			return;
+
+		int total = 0;
+		for (Iterator<EnemyShip> it = formation.iterator(); it.hasNext();) {
+			it.next();
+			total++;
 		}
+
+		int toKill = total * killedPercent / 100;
+		int killed = 0;
+		for (Iterator<EnemyShip> it = formation.iterator();
+				it.hasNext() && killed < toKill; killed++)
+			formation.destroy(it.next());
 	}
 
 	/**
