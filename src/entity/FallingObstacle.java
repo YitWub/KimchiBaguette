@@ -14,7 +14,7 @@ public final class FallingObstacle extends Entity {
 
 	public FallingObstacle(final int positionX, final int positionY) {
 		super(positionX, positionY, WIDTH, HEIGHT, Color.RED);
-		this.spriteType = SpriteType.Explosion;
+		this.spriteType = SpriteType.FallingObstacle;
 	}
 
 	/** Advances the obstacle toward the bottom of the playfield. */

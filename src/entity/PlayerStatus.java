@@ -178,8 +178,7 @@ public class PlayerStatus {
 
 	/** @return Whether the slow debuff is currently active. */
 	public final boolean isSlowActive() {
-		updateSlowDebuff();
-		return this.slowedShip != null;
+		return isSlowActiveAt(currentTimeMillis());
 	}
 
 	/**
@@ -188,10 +187,17 @@ public class PlayerStatus {
 	 * @return Milliseconds remaining, or zero when inactive.
 	 */
 	public final int getSlowRemainingMillis() {
-		updateSlowDebuff();
-		long remaining = this.slowExpiryTime - currentTimeMillis();
-		return this.slowedShip != null && remaining > 0
-				? (int) remaining : 0;
+		long now = currentTimeMillis();
+		if (!isSlowActiveAt(now))
+			return 0;
+		return (int) (this.slowExpiryTime - now);
+	}
+
+	/** Checks the logical slow state without mutating it or publishing events. */
+	private boolean isSlowActiveAt(final long now) {
+		return this.slowedShip != null && this.lives > 0
+				&& this.shieldExpiryTime <= now
+				&& now < this.slowExpiryTime;
 	}
 
 	/** Ends the active movement-only slow, if one is present. */

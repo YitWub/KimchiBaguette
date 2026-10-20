@@ -1,5 +1,6 @@
 package screen;
 
+import engine.DrawManager.SpriteType;
 import engine.GameSettings;
 import engine.GameState;
 import entity.FallingObstacle;
@@ -28,6 +29,7 @@ public final class FallingObstacleIntegrationTest {
 	}
 
 	public static void main(final String[] args) throws Exception {
+		checkDedicatedObstacleSpriteResource();
 		checkObstacleMovementAndSpawn();
 		checkObstacleCollisionAppliesSlowOnlyOnce();
 		checkDestroyedShipCollisionOnlyConsumesObstacle();
@@ -36,6 +38,28 @@ public final class FallingObstacleIntegrationTest {
 		checkShipMovementTypesAndChameleon();
 		checkWaveTransitionClearsObstacles();
 		System.out.println("Falling obstacle integration checks passed.");
+	}
+
+	/** Checks the sprite kind and exact number of bits consumed by the loader. */
+	private static void checkDedicatedObstacleSpriteResource() throws Exception {
+		FallingObstacle obstacle = new FallingObstacle(10, 10);
+		check(obstacle.getSpriteType() == SpriteType.FallingObstacle,
+				"The hazard uses its dedicated sprite type");
+		java.io.InputStream input = FallingObstacleIntegrationTest.class
+				.getClassLoader().getResourceAsStream("graphics");
+		check(input != null, "The graphics resource is on the test classpath");
+		int bitCount = 0;
+		int value;
+		try {
+			while ((value = input.read()) != -1)
+				if (value == '0' || value == '1')
+					bitCount++;
+		} finally {
+			input.close();
+		}
+		check(bitCount == 1108,
+				"All existing and new sprite pixels are present (expected 1108, got "
+						+ bitCount + ")");
 	}
 
 	private static void checkObstacleMovementAndSpawn() throws Exception {
@@ -52,6 +76,9 @@ public final class FallingObstacleIntegrationTest {
 		Set<FallingObstacle> obstacles = obstacles(game);
 		check(obstacles.size() == 1,
 				"An expired spawn timer creates one obstacle");
+		check(field(spawnCooldown.getClass(), "time")
+				.getLong(spawnCooldown) == 0L,
+				"Spawning does not restart the post-removal cooldown");
 		FallingObstacle obstacle = obstacles.iterator().next();
 		check(obstacle.getPositionX() >= 1
 				&& obstacle.getPositionX() + obstacle.getWidth()

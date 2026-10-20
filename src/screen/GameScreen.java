@@ -99,7 +99,10 @@ public class GameScreen extends Screen {
 	private ItemManager itemManager;
 	private final Random itemDropRandom = new Random();
 	private final Random obstacleRandom = new Random();
-	/** Active falling hazards for this level. */
+	/**
+	 * Active falling hazards for this level. Kept as a set so the collection
+	 * can support multiple hazards if the spawn policy is expanded later.
+	 */
 	private Set<FallingObstacle> fallingObstacles;
 	/** Time until the next falling hazard appears. */
 	private Cooldown fallingObstacleCooldown;
@@ -454,6 +457,7 @@ public class GameScreen extends Screen {
 		// Outside the input-delay check: a shield that runs out has to be
 		// announced even while the level is finishing.
 		this.playerStatus.update();
+		// Reconcile shields active outside the item-collision path.
 		clearSlowIfEnergyShieldActive();
 
         if (this.inputDelay.checkFinished() && !this.levelFinished) {
@@ -567,6 +571,7 @@ public class GameScreen extends Screen {
 
 			if (!this.ship.isDestroyed()) {
 				this.itemManager.checkCollisions(this.ship);
+				// Clear in this frame if an Energy Shield item was just collected.
 				clearSlowIfEnergyShieldActive();
 			}
 
@@ -776,7 +781,6 @@ public class GameScreen extends Screen {
 			int positionX = 1 + this.obstacleRandom.nextInt(rightmostX);
 			this.fallingObstacles.add(new FallingObstacle(positionX,
 					SEPARATION_LINE_HEIGHT));
-			this.fallingObstacleCooldown.reset();
 		}
 
 		for (Iterator<FallingObstacle> iterator =

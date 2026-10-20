@@ -105,6 +105,7 @@ public final class PlayerStatusEventTest {
 		checkShieldExpiryBeforeNewShield();
 		checkClearShieldEvent();
 		checkSlowStartRefreshAndExpiry();
+		checkSlowGettersAreReadOnlyAtExpiry();
 		checkSlowBlockAndShieldClear();
 		checkSlowEndsOnDeath();
 		checkIgnoredChangesAreSilent();
@@ -303,6 +304,34 @@ public final class PlayerStatusEventTest {
 		recorder.clear();
 		status.update();
 		checkKinds(recorder, "");
+	}
+
+	/** Reading expired slow state must not perform its transition or publish. */
+	private static void checkSlowGettersAreReadOnlyAtExpiry() {
+		FakeClockStatus status = new FakeClockStatus(3, 3);
+		Recorder recorder = new Recorder();
+		Ship ship = new Ship(100, 100);
+		status.addListener(recorder);
+		status.applySlow(ship);
+		recorder.clear();
+
+		status.advance(PlayerStatus.getSlowDuration());
+		check(!status.isSlowActive(),
+				"The slow getter reports inactive at the expiry boundary");
+		check(status.getSlowRemainingMillis() == 0,
+				"The remaining-time getter reports zero at expiry");
+		checkKinds(recorder, "");
+		ship.moveRight();
+		check(ship.getPositionX() == 101,
+				"A getter does not clear the ship's slow modifier");
+
+		status.update();
+		checkKinds(recorder, "SLOW_ENDED");
+		ship.moveRight();
+		check(ship.getPositionX() == 103,
+				"The update transition restores normal movement");
+		status.update();
+		checkKinds(recorder, "SLOW_ENDED");
 	}
 
 	/** A shield blocks new slow events and clears an active slow once. */
