@@ -26,7 +26,7 @@ public final class FormationMovementSpeedTest {
 	private static final double TOLERANCE = 0.05;
 	/** Frames to average a measurement over. */
 	private static final int SAMPLE_FRAMES = 600;
-	/** DIAGONAL_MAX_SPEED / DIAGONAL_INTERVAL, the fastest the pattern goes. */
+	/** MAX_STEP / STEP_INTERVAL, the fastest the pattern goes. */
 	private static final double MAXIMUM_PACE = 16.0 / 2.0;
 
 	private FormationMovementSpeedTest() {
@@ -147,12 +147,18 @@ public final class FormationMovementSpeedTest {
 	}
 
 	/**
+	 * Level whose formation uses the diagonal pattern: the pattern rotates
+	 * with the level, classic then wave then diagonal.
+	 */
+	private static final int DIAGONAL_LEVEL = 3;
+
+	/**
 	 * Builds a formation attached to a real screen. GameScreen owns that
 	 * wiring, so it is borrowed rather than rebuilt here.
 	 */
 	private static EnemyShipFormation formation(final int baseSpeed)
 			throws Exception {
-		GameScreen game = new GameScreen(new GameState(1, 0, 3, 0, 0),
+		GameScreen game = new GameScreen(new GameState(DIAGONAL_LEVEL, 0, 3, 0, 0),
 				new GameSettings(5, 4, baseSpeed, 2000), false, 448, 520, 60);
 		game.initialize();
 
