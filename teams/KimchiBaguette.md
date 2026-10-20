@@ -71,10 +71,12 @@ Bonus element: an extra life, granted on entry to every third stage while the ch
 ship is still below its own maximum. A timed shield of our own is out of scope — the
 only shield a player can pick up in play is the Energy Shield item, which belongs to
 another team.
-Penalty element: an obstacle that blocks player movement or fire.
+Penalty element: an obstacle that falls through the play area and halves the player's
+movement speed for 2 seconds on contact. It blocks nothing — it deals no damage, costs
+no life and leaves firing untouched.
 *Complete when* the life count rises by one on entry to a stage that grants it and never
-passes the chosen ship's maximum, and the penalty element has an effect the player can
-observe without reading the log.
+passes the chosen ship's maximum, and a touched obstacle visibly slows the ship sideways
+for about two seconds without costing a life or interrupting its fire.
 
 ## Dependencies on Other Teams
 The items below are the support our own requirements depend on, and that we therefore
