@@ -6,6 +6,7 @@ import engine.GameSettings;
 import engine.GameState;
 import entity.PlayerStatus;
 import entity.Ship;
+import entity.ShipType;
 
 /**
  * Standalone checks that every source of damage reaches the player through
@@ -79,9 +80,11 @@ public final class PlayerDamagePathTest {
 	 */
 	private static void checkTimedShieldStopsDamageAndEffects()
 			throws Exception {
-		GameScreen game = newGame();
+		// Only a shield-capable ship may raise one, so this case has to be
+		// played with the Heavy Tank rather than the default ship.
+		GameScreen game = newGame(ShipType.TANK);
 		PlayerStatus status = statusOf(game);
-		status.activateShield();
+		check(status.activateShield(), "The Heavy Tank raises a shield");
 
 		check(!game.damagePlayer(1, "test"),
 				"A hit is refused while the timed shield is up");
@@ -109,8 +112,13 @@ public final class PlayerDamagePathTest {
 	}
 
 	private static GameScreen newGame() {
+		return newGame(ShipType.STANDARD);
+	}
+
+	private static GameScreen newGame(final ShipType shipType) {
 		GameScreen game = new GameScreen(new GameState(1, 0, 3, 0, 0),
-				new GameSettings(5, 4, 60, 2000), false, 448, 520, 60);
+				new GameSettings(5, 4, 60, 2000), false, 448, 520, 60,
+				shipType);
 		game.initialize();
 		return game;
 	}

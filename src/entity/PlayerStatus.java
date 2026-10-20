@@ -46,6 +46,12 @@ public class PlayerStatus {
 	 */
 	private long shieldExpiryTime;
 	/**
+	 * Whether the selected ship may hold a shield. Ships that cannot are
+	 * refused by {@link #activateShield()}, so the rule holds wherever a
+	 * shield is granted from rather than at each call site.
+	 */
+	private final boolean shieldCapable;
+	/**
 	 * Whether a shield was up the last time the clock was looked at. Keeps
 	 * {@link PlayerStatusEvent.Type#SHIELD_ENDED} to one event per shield,
 	 * since nothing counts the shield down frame by frame.
@@ -76,6 +82,23 @@ public class PlayerStatus {
 	 *            Maximum number of lives.
 	 */
 	public PlayerStatus(final int initialLives, final int maxLives) {
+		this(initialLives, maxLives, true);
+	}
+
+	/**
+	 * Creates a valid player-life state for a ship that may or may not be
+	 * allowed to hold a shield.
+	 *
+	 * @param initialLives
+	 *            Initial number of lives.
+	 * @param maxLives
+	 *            Maximum number of lives.
+	 * @param shieldCapable
+	 *            Whether the selected ship may hold a shield at all.
+	 */
+	public PlayerStatus(final int initialLives, final int maxLives,
+			final boolean shieldCapable) {
+		this.shieldCapable = shieldCapable;
 		if (maxLives <= 0)
 			throw new IllegalArgumentException(
 					"Maximum lives must be positive.");
@@ -329,7 +352,10 @@ public class PlayerStatus {
 	 * no damage until it expires. A refresh is announced as its own kind of
 	 * event, so the HUD can restart a gauge rather than start a second one.
 	 */
-	public final void activateShield() {
+	public final boolean activateShield() {
+		if (!this.shieldCapable)
+			return false;
+
 		announceExpiredShield();
 
 		boolean refreshed = isShieldActive();
@@ -337,6 +363,16 @@ public class PlayerStatus {
 		this.shieldAnnounced = true;
 		publish(refreshed ? PlayerStatusEvent.shieldRefreshed(this)
 				: PlayerStatusEvent.shieldStarted(this));
+		return true;
+	}
+
+	/**
+	 * Reports whether the selected ship may hold a shield at all.
+	 *
+	 * @return True if a shield can be raised.
+	 */
+	public final boolean isShieldCapable() {
+		return this.shieldCapable;
 	}
 
 	/**

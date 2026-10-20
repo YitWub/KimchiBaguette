@@ -345,7 +345,8 @@ public class GameScreen extends Screen {
 		this.playerStatus = new PlayerStatus(
 				Math.min(gameState.getLivesRemaining(),
 						this.shipType.getMaxLives()),
-				this.shipType.getMaxLives());
+				this.shipType.getMaxLives(),
+				this.shipType.isShieldCapable());
         if (this.bonusLife)
 			this.playerStatus.gainLife();
         this.bulletsShot = gameState.getBulletsShot();
@@ -391,7 +392,8 @@ public class GameScreen extends Screen {
 		// The boss appears only on boss stages.
 		if (isBossLevel(this.level))
 			this.bossManager.spawn(new BossSpawnRequest(
-					Boss.BossType.BOSS_A, this.width / 2 - Boss.WIDTH / 2, 78,
+					bossTypeForLevel(this.level),
+					this.width / 2 - Boss.WIDTH / 2, 78,
 					this.level, 0));
 		this.bossExplosionCooldown = Core.getCooldown(BOSS_EXPLOSION_TIME);
 
@@ -1012,6 +1014,20 @@ public class GameScreen extends Screen {
 	 *            Stage number, starting at 1.
 	 * @return True if the stage is a boss stage.
 	 */
+	/**
+	 * Picks the boss for a stage. The slow boss opens the run; the faster
+	 * one, which reaches its stronger phases earlier, takes the later boss
+	 * stages, so the two differ in more than their health bar.
+	 *
+	 * @param level
+	 *            Stage number, starting at 1.
+	 * @return Boss to spawn on that stage.
+	 */
+	static Boss.BossType bossTypeForLevel(final int level) {
+		return level <= BOSS_LEVELS[0] ? Boss.BossType.BOSS_A
+				: Boss.BossType.BOSS_B;
+	}
+
 	private static boolean isBossLevel(final int level) {
 		for (int bossLevel : BOSS_LEVELS)
 			if (bossLevel == level)
