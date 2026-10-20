@@ -118,8 +118,12 @@ public final class GameplayIntegrationTest {
         normal.setPositionX(player.getPositionX()); normal.setPositionY(150);
         EnemyShip special = new EnemyShip(); special.setPositionX(player.getPositionX()); special.setPositionY(80);
         set(get(game,"bonusEnemyManager"),"bonusShip",special);
-        List<String> events = new ArrayList<String>();
-        game.getGameplayEvents().subscribe(event.EnemyDefeatedEvent.class, e -> events.add(e.getEventId()));
+        final List<String> events = new ArrayList<String>();
+        game.getGameplayEvents().subscribe(event.EnemyDefeatedEvent.class,
+                new event.GameplayEventListener<event.EnemyDefeatedEvent>() {
+                    @Override
+                    public void onEvent(final event.EnemyDefeatedEvent e) { events.add(e.getEventId()); }
+                });
         player.setShieldActive(true);
         Set<Bullet> incoming = (Set<Bullet>)get(game,"bullets");
         incoming.add(BulletPool.getBullet(player.getPositionX()+4,player.getPositionY()+4,4));
@@ -154,8 +158,12 @@ public final class GameplayIntegrationTest {
         game.initialize();
         List<ZigzagEnemyShip> enemies = (List<ZigzagEnemyShip>)get(game,"enemies");
         Set<Bullet> bullets = (Set<Bullet>)get(game,"bullets");
-        List<String> events = new ArrayList<String>();
-        game.getGameplayEvents().subscribe(event.EnemyDefeatedEvent.class,e -> events.add(e.getEventId()));
+        final List<String> events = new ArrayList<String>();
+        game.getGameplayEvents().subscribe(event.EnemyDefeatedEvent.class,
+                new event.GameplayEventListener<event.EnemyDefeatedEvent>() {
+                    @Override
+                    public void onEvent(final event.EnemyDefeatedEvent e) { events.add(e.getEventId()); }
+                });
         enemies.add(new ZigzagEnemyShip(100,100,DrawManager.SpriteType.EnemyShipA1,1));
         bullets.add(BulletPool.getBullet(104,104,-4));
         call(game,"manageCollisions"); call(game,"manageCollisions");
