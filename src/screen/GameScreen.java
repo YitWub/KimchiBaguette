@@ -965,8 +965,14 @@ public class GameScreen extends Screen {
 			return;
 		boss.takeDamage(damage);
 		this.bossManager.sync();
-		if (boss.isDefeated())
+		// The check above stops a defeated boss from being hit again, so the
+		// score is given only once per boss.
+		if (boss.isDefeated()) {
 			this.bossExplosionCooldown.reset();
+			this.score += boss.getType().getPointValue();
+			this.logger.info("Boss " + boss.getType() + " defeated, +"
+					+ boss.getType().getPointValue() + " points.");
+		}
 	}
 
 	/**
