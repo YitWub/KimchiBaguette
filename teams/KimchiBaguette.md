@@ -67,12 +67,14 @@ pattern changes as the boss loses HP, and a defeated boss stops moving and attac
 and does not respawn.
 
 **R5. Bonus and penalty elements.**
-Bonus elements: a shield that absorbs all damage for 3 seconds, and an extra life.
+Bonus element: an extra life, granted on entry to every third stage while the chosen
+ship is still below its own maximum. A timed shield of our own is out of scope — the
+only shield a player can pick up in play is the Energy Shield item, which belongs to
+another team.
 Penalty element: an obstacle that blocks player movement or fire.
-*Complete when* each element can be obtained or encountered in play, the shield blocks
-every hit taken while it is up and expires on its own after 3 seconds rather than on
-the first hit, and the penalty element has an effect the player can observe without
-reading the log.
+*Complete when* the life count rises by one on entry to a stage that grants it and never
+passes the chosen ship's maximum, and the penalty element has an effect the player can
+observe without reading the log.
 
 ## Dependencies on Other Teams
 The items below are the support our own requirements depend on, and that we therefore
