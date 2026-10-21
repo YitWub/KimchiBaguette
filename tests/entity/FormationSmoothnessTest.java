@@ -1,6 +1,10 @@
 package entity;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Iterator;
 import java.util.logging.LogManager;
 
@@ -178,17 +182,27 @@ public final class FormationSmoothnessTest {
 		if (killedPercent <= 0)
 			return;
 
-		int total = 0;
-		for (Iterator<EnemyShip> it = formation.iterator(); it.hasNext();) {
-			it.next();
-			total++;
-		}
+		// iterator() hands back a HashSet iterator, so its order follows
+		// allocation and changes whenever EnemyShip's constructor does. That
+		// made which ships die vary between runs, and with it how far the
+		// formation's bounding box shrank, so the same check could pass or
+		// fail on identical code. Sorting by position fixes the selection to
+		// the ships nearest the top-left, which is also the order a column
+		// actually dies in.
+		List<EnemyShip> ships = new ArrayList<EnemyShip>();
+		for (Iterator<EnemyShip> it = formation.iterator(); it.hasNext();)
+			ships.add(it.next());
+		Collections.sort(ships, new Comparator<EnemyShip>() {
+			public int compare(final EnemyShip left, final EnemyShip right) {
+				if (left.getPositionX() != right.getPositionX())
+					return left.getPositionX() - right.getPositionX();
+				return left.getPositionY() - right.getPositionY();
+			}
+		});
 
-		int toKill = total * killedPercent / 100;
-		int killed = 0;
-		for (Iterator<EnemyShip> it = formation.iterator();
-				it.hasNext() && killed < toKill; killed++)
-			formation.destroy(it.next());
+		int toKill = ships.size() * killedPercent / 100;
+		for (int i = 0; i < toKill; i++)
+			formation.destroy(ships.get(i));
 	}
 
 	/** Builds a formation on a real screen and forces its movement pattern. */

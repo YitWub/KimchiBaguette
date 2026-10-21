@@ -276,7 +276,19 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 				+ (int) Math.round(amplitude * Math.sin(this.wavePhase));
 		nextY = Math.max(minY, Math.min(nextY, maxY));
 
-		return new int[] { nextX - this.positionX, nextY - this.positionY };
+		// cleanUp() re-anchors positionY to the topmost surviving ship, so a
+		// cleared row leaves the formation far from its curve. Without a
+		// limit the next frame drags every ship back in one move, which the
+		// player sees as a jump. The diagonal pattern already moves at most
+		// one step towards its target; the wave does the same here.
+		int step = scaledStep(WAVE_X_SPEED);
+		int movementY = nextY - this.positionY;
+		if (movementY > step)
+			movementY = step;
+		else if (movementY < -step)
+			movementY = -step;
+
+		return new int[] { nextX - this.positionX, movementY };
 	}
 
 
