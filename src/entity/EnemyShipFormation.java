@@ -322,6 +322,12 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
      *            Step, in pixels, of a full formation on the opening stage.
      * @return Step length in pixels.
      */
+    private int scaledStep(final int baseStep) {
+        int scaled = baseStep * REFERENCE_SPEED
+                / Math.max(1, this.movementSpeed);
+        return Math.max(1, Math.min(MAX_STEP, scaled));
+    }
+
     /**
      * The remainder of a division, never negative, for any sign of the
      * value. Java 7 has no Math.floorMod and the README asks for Java 7, so
@@ -335,12 +341,6 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
      */
     private static int floorMod(final int value, final int modulus) {
         return (value % modulus + modulus) % modulus;
-    }
-
-    private int scaledStep(final int baseStep) {
-        int scaled = baseStep * REFERENCE_SPEED
-                / Math.max(1, this.movementSpeed);
-        return Math.max(1, Math.min(MAX_STEP, scaled));
     }
 
     /**
