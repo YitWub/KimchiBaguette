@@ -1323,6 +1323,11 @@ public class GameScreen extends Screen {
 				this.particleSystem.spawnEnemyExplosion(
 						event.getPositionX() + i * Boss.WIDTH / 3,
 						event.getPositionY());
+			// The boss manager sends this once per boss, so the count and
+			// the record are both taken from here. The score screen and the
+			// saved run record read shipsDestroyed, not the defeat events,
+			// so a boss went uncounted in both until this.
+			this.shipsDestroyed++;
 			recordBossDefeat();
 			break;
 		default:
