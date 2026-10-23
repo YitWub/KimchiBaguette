@@ -31,7 +31,7 @@ building and running `engine.Core`.
 
 **R1. Selectable player ships with distinct stats.**
 Three ships are selectable before the game starts: Standard (speed 2, 750 ms between
-shots, 3 lives), Speedster (speed 4, 400 ms, 2 lives) and Heavy Tank (speed 1,
+shots, 4 lives), Speedster (speed 4, 400 ms, 3 lives) and Heavy Tank (speed 1,
 1000 ms, 5 lives, shield-capable).
 *Complete when* the selection screen offers all three, the chosen ship carries its own
 speed, fire interval and life count into the game screen, and only the shield-capable
