@@ -26,7 +26,7 @@ public class Boss extends Entity {
     /** Kinds of bosses and their base values. */
     public enum BossType {
         /** Slow boss. */
-        BOSS_A(1000, 1, 0.6, 0.3, 500),
+        BOSS_A(850, 1, 0.5, 0.1, 500),
         /** Fast boss, gets stronger earlier. */
         BOSS_B(800, 3, 0.7, 0.4, 800);
 

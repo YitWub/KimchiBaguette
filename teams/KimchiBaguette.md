@@ -61,7 +61,7 @@ formation visibly covers more ground per second on a later stage and as it is th
 out, without its motion breaking into jumps.
 
 **R4. Bosses with difficulty levels and varied projectile attacks.**
-Two boss types (1000 HP slow, 800 HP fast), each with three phases driven by remaining
+Two boss types (8500 HP slow, 800 HP fast), each with three phases driven by remaining
 HP and three attack patterns (single shot, multi shot, spread shot), plus one special
 attack reserved for the final phase. Bosses appear on stages 3, 5 and 7.
 *Complete when* a boss stage cannot be cleared while its boss is alive, the attack
