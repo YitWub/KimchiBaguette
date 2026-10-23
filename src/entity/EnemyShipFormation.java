@@ -32,7 +32,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	/** Downwards step of the classic pattern, on the opening stage. */
 	private static final int Y_SPEED = 2;
 	/** Speed of the bullets shot by the members. */
-	private static final int BULLET_SPEED = 4;
+	private static final int BULLET_SPEED = 3;
 	/** Proportion of differences between shooting times. */
 	private static final double SHOOTING_VARIANCE = .2;
 	/** Margin on the sides of the screen. */
