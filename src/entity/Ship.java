@@ -67,6 +67,13 @@ public class Ship extends Entity {
 
     /** Time spent inactive between hits. */
     private Cooldown destructionCooldown;
+    /**
+     * Time during which a hit cannot land. It outlasts
+     * {@link #destructionCooldown} on purpose: the player gets the tail of it
+     * back in control, which is the only chance they have to leave the spot
+     * the enemies aimed at while the ship could not move.
+     */
+    private Cooldown invulnerabilityCooldown;
 
     private boolean isShieldActive = false;
 
@@ -94,6 +101,10 @@ public class Ship extends Entity {
 
     /** Duration of the damage flashing feedback in milliseconds (0.5s). */
     private static final int DAMAGE_FEEDBACK_DURATION = 500;
+    /** Duration of the protection after a hit, in milliseconds (2s). */
+    private static final int INVULNERABILITY_DURATION = 2000;
+    /** Time the ship cannot move after a hit, in milliseconds (1s). */
+    private static final int STUN_DURATION = 1000;
     /** Rate in ms at which the ship color alternates during damage feedback. */
     private static final int FLASH_INTERVAL = 100;
     /** Default normal color of the ship. */
@@ -141,7 +152,9 @@ public class Ship extends Entity {
         this.currentBulletType = shipType.getBulletType();
         this.bulletSpeed = this.currentBulletType.getSpeed();
         this.spriteType = SpriteType.Ship;
-        this.destructionCooldown = Core.getCooldown(1000);
+        this.destructionCooldown = Core.getCooldown(STUN_DURATION);
+        this.invulnerabilityCooldown =
+                Core.getCooldown(INVULNERABILITY_DURATION);
         this.damageFeedbackCooldown = Core.getCooldown(DAMAGE_FEEDBACK_DURATION);
         this.grenadeCooldown = Core.getCooldown(GRENADE_COOLDOWN);
     }
@@ -439,6 +452,7 @@ public class Ship extends Entity {
         this.twinCannonActive = false;
         deactivateChameleonHull();
         this.destructionCooldown.reset();
+        this.invulnerabilityCooldown.reset();
     }
 
     /**
@@ -448,6 +462,17 @@ public class Ship extends Entity {
      */
     public final boolean isDestroyed() {
         return !this.destructionCooldown.checkFinished();
+    }
+
+    /**
+     * Checks if the ship is still protected by the recovery from an earlier
+     * hit. The protection lasts longer than {@link #isDestroyed()}, so a ship
+     * that has its controls back can still be immune for a moment.
+     *
+     * @return True if a hit cannot land on the ship right now.
+     */
+    public final boolean isInvulnerable() {
+        return !this.invulnerabilityCooldown.checkFinished();
     }
 
     /**

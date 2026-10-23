@@ -918,7 +918,7 @@ public class GameScreen extends Screen {
 				// Remove first so a single obstacle can trigger only one collision.
 				iterator.remove();
 				this.fallingObstacleCooldown.reset();
-				if (!this.ship.isDestroyed() && !this.ship.isShieldActive())
+				if (!this.ship.isInvulnerable() && !this.ship.isShieldActive())
 					this.playerStatus.applySlow(this.ship);
 			}
 		}
@@ -1074,8 +1074,8 @@ public class GameScreen extends Screen {
 	 * <p>The order matters. A protection returns before any life is taken,
 	 * and the ship is destroyed only once the damage was actually accepted,
 	 * which also stops several bullets in the same frame from each costing a
-	 * life: the first accepted hit starts the destruction cooldown and the
-	 * rest are turned away by {@link Ship#isDestroyed()}.</p>
+	 * life: the first accepted hit starts the recovery and the rest are
+	 * turned away by {@link Ship#isInvulnerable()}.</p>
 	 *
 	 * @param damage
 	 *            Amount of damage the source deals.
@@ -1088,8 +1088,10 @@ public class GameScreen extends Screen {
 		// The Chameleon Hull makes the ship immune while it is active.
 		if (this.ship.isChameleonHullActive())
 			return false;
-		// Still inside the recovery period from an earlier hit.
-		if (this.ship.isDestroyed())
+		// Still inside the recovery period from an earlier hit. This outlasts
+		// the time the ship cannot move, so that the player is not killed by
+		// the shots that were aimed at them while they were held in place.
+		if (this.ship.isInvulnerable())
 			return false;
 		if (this.ship.isShieldActive()) {
 			this.logger.info("Shot absorbed by Energy Shield.");

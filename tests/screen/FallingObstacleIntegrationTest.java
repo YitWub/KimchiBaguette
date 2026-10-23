@@ -143,7 +143,8 @@ public final class FallingObstacleIntegrationTest {
 				&& statusEvents.get(0).getType()
 						== PlayerStatusEvent.Type.SLOW_STARTED,
 				"GameScreen forwards the slow-start event to the gameplay bus");
-		check(status.getLives() == lives && !ship.isDestroyed(),
+		check(status.getLives() == lives && !ship.isDestroyed()
+				&& !ship.isInvulnerable(),
 				"An obstacle neither damages nor destroys the player ship");
 		check(field(ship.getClass(), "damageFeedbackStartTime").getLong(ship)
 				== feedbackTime,
@@ -194,7 +195,7 @@ public final class FallingObstacleIntegrationTest {
 				});
 
 		ship.destroy();
-		check(ship.isDestroyed() && status.isAlive(),
+		check(ship.isDestroyed() && ship.isInvulnerable() && status.isAlive(),
 				"The recovery test starts with a living, recently hit player");
 		obstacles(game).add(new FallingObstacle(
 				ship.getPositionX(), ship.getPositionY()));
@@ -209,7 +210,11 @@ public final class FallingObstacleIntegrationTest {
 				"A collision during hit recovery emits no slow start or refresh");
 
 		setLong(read(ship, "destructionCooldown"), "time", 0L);
-		check(!ship.isDestroyed(),
+		check(!ship.isDestroyed() && ship.isInvulnerable(),
+				"Regaining the controls leaves the protection running");
+
+		setLong(read(ship, "invulnerabilityCooldown"), "time", 0L);
+		check(!ship.isInvulnerable(),
 				"The recovery cooldown can be ended deterministically in the test");
 		obstacles(game).add(new FallingObstacle(
 				ship.getPositionX(), ship.getPositionY()));
