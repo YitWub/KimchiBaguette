@@ -330,6 +330,64 @@ class EnemyDefeatClassificationTest {
                 "the final defeat is delivered before the stage completes");
     }
 
+    @Test
+    void everyDefeatIdIsGroupedUnderItsEnemyType() throws Exception {
+        GameScreen game = campaign(1, "grouped-ids");
+        Defeats defeats = watch(game);
+
+        for (DefeatedEnemyType expected : Arrays.asList(DefeatedEnemyType.A,
+                DefeatedEnemyType.B, DefeatedEnemyType.C)) {
+            shoot(game, isolate(game, expected));
+            call(game, "manageCollisions");
+        }
+        shoot(game, placeBonusEnemy(game, CLEAR_X, CLEAR_Y));
+        call(game, "manageCollisions");
+
+        assertEquals(4, defeats.size());
+        for (int index = 0; index < defeats.size(); index++) {
+            DefeatedEnemyType type = defeats.types().get(index);
+            String id = defeats.ids().get(index);
+            assertTrue(id.startsWith(type.name() + GameScreen.DEFEAT_ID_SEPARATOR),
+                    "defeat ID " + id + " is grouped under " + type);
+            assertEquals(type.name(),
+                    id.substring(0, id.indexOf(GameScreen.DEFEAT_ID_SEPARATOR)),
+                    "the grouping agrees with the published type");
+        }
+        assertEquals(4, new HashSet<String>(defeats.ids()).size(),
+                "grouping the IDs keeps them distinct");
+    }
+
+    @Test
+    void twoEnemiesOfOneTypeStayTwoSeparateDefeats() throws Exception {
+        GameScreen game = campaign(1, "same-type-twice");
+        Defeats defeats = watch(game);
+
+        shoot(game, isolate(game, DefeatedEnemyType.A));
+        call(game, "manageCollisions");
+        shoot(game, isolate(game, DefeatedEnemyType.A));
+        call(game, "manageCollisions");
+
+        assertEquals(Arrays.asList(DefeatedEnemyType.A, DefeatedEnemyType.A),
+                defeats.types(), "both defeats report the same type");
+        assertEquals(2, new HashSet<String>(defeats.ids()).size(),
+                "two enemies of one type are still two defeats");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"3, BOSS_A", "5, BOSS_B"})
+    void aBossDefeatIdIsGroupedUnderItsBossType(final int stage,
+            final Boss.BossType expected) throws Exception {
+        GameScreen game = campaign(stage, "boss-id-" + stage);
+        Defeats defeats = watch(game);
+
+        damageBoss(game, expected.getMaxHealth());
+
+        assertEquals(1, defeats.size());
+        assertTrue(defeats.ids().get(0).startsWith(
+                expected.name() + GameScreen.DEFEAT_ID_SEPARATOR),
+                "the boss defeat ID is grouped under " + expected);
+    }
+
     // Collects the published defeats in the order they arrive.
     private static final class Defeats
             implements GameplayEventListener<EnemyDefeatedEvent> {

@@ -213,6 +213,8 @@ public class GameScreen extends Screen {
     private long achievementNoticeUntil;
     private final GameplayEventPublisher recordsEvents = new GameplayEventPublisher();
     private final Map<EnemyShip,String> defeatIds = new IdentityHashMap<EnemyShip,String>();
+    /** Separates the enemy type from the random part of a defeat ID. */
+    static final String DEFEAT_ID_SEPARATOR = ":";
     /** Prevents repeated activation while holding H. */
     private boolean hyperfireKeyPressed = false;
     /** Flag to track if the urgent low-health BGM is currently playing. */
@@ -1496,9 +1498,25 @@ public class GameScreen extends Screen {
 	private void recordBossDefeat(final Boss.BossType bossType) {
 		if (this.runSession == null)
 			return;
+		DefeatedEnemyType type = classifyBoss(bossType);
 		this.recordsEvents.publish(new EnemyDefeatedEvent(
-				this.runSession.getRunId(), UUID.randomUUID().toString(),
-				classifyBoss(bossType)));
+				this.runSession.getRunId(), newDefeatId(type), type));
+	}
+
+	/**
+	 * Builds the ID of one defeat, grouped by the type of enemy defeated. The
+	 * random part keeps every defeat distinct, so two enemies of the same
+	 * type still count as two defeats and the ID stays usable on its own for
+	 * duplicate detection. The type is handed out here rather than derived by
+	 * a listener; {@link EnemyDefeatedEvent#getEnemyType()} remains the value
+	 * to read, and this prefix only groups the IDs it accompanies.
+	 *
+	 * @param type
+	 *            Classification of the defeated enemy.
+	 * @return Defeat ID beginning with its enemy type.
+	 */
+	private static String newDefeatId(final DefeatedEnemyType type) {
+		return type.name() + DEFEAT_ID_SEPARATOR + UUID.randomUUID();
 	}
 
 	/**
@@ -1522,7 +1540,7 @@ public class GameScreen extends Screen {
     private void recordEnemyDefeat(final EnemyShip enemy) {
         if (this.runSession == null) return;
         String id = this.defeatIds.get(enemy);
-        if (id == null) { id=UUID.randomUUID().toString(); this.defeatIds.put(enemy,id); }
+        if (id == null) { id=newDefeatId(enemy.getDefeatedType()); this.defeatIds.put(enemy,id); }
         this.recordsEvents.publish(new EnemyDefeatedEvent(this.runSession.getRunId(),id,
                 enemy.getDefeatedType()));
     }
