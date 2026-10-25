@@ -6,6 +6,7 @@ import engine.Cooldown;
 import engine.Core;
 import engine.GameColors;
 import engine.DrawManager.SpriteType;
+import event.DefeatedEnemyType;
 
 /**
  * Implements a enemy ship, to be destroyed by the player.
@@ -34,6 +35,11 @@ public class EnemyShip extends Entity {
 	private Cooldown shootingCooldown;
 	/** Remaining hit points; legacy and bonus enemies start with one. */
 	private int health = 1;
+	/**
+	 * Kind of enemy this is, recorded on creation. Destruction swaps the
+	 * sprite for an explosion, so the sprite cannot be read back later.
+	 */
+	private final DefeatedEnemyType defeatedType;
 
 	/**
 	 * Constructor, establishes the ship's properties.
@@ -58,6 +64,7 @@ public class EnemyShip extends Entity {
 			throw new IllegalArgumentException("health must be positive");
 		this.health = health;
 		this.spriteType = spriteType;
+		this.defeatedType = classify(spriteType);
 		this.animationCooldown = Core.getCooldown(500);
 		this.isDestroyed = false;
 
@@ -90,7 +97,45 @@ public class EnemyShip extends Entity {
 		this.spriteType = SpriteType.EnemyShipSpecial;
 		this.isDestroyed = false;
 		this.pointValue = BONUS_TYPE_POINTS;
+		this.defeatedType = DefeatedEnemyType.BONUS;
 
+	}
+
+	/**
+	 * Classifies an enemy from the sprite it is created with. Both animation
+	 * frames of a normal enemy give the same classification.
+	 *
+	 * @param spriteType
+	 *            Sprite the enemy is created with.
+	 * @return Classification of the enemy, UNKNOWN for an unlisted sprite.
+	 */
+	private static DefeatedEnemyType classify(final SpriteType spriteType) {
+		switch (spriteType) {
+		case EnemyShipA1:
+		case EnemyShipA2:
+			return DefeatedEnemyType.A;
+		case EnemyShipB1:
+		case EnemyShipB2:
+			return DefeatedEnemyType.B;
+		case EnemyShipC1:
+		case EnemyShipC2:
+			return DefeatedEnemyType.C;
+		case EnemyShipSpecial:
+			return DefeatedEnemyType.BONUS;
+		default:
+			return DefeatedEnemyType.UNKNOWN;
+		}
+	}
+
+	/**
+	 * Getter for the kind of enemy this is, for a defeat event. It is taken
+	 * from the sprite the enemy was created with, so it survives the
+	 * animation frames and the explosion applied by {@link #destroy()}.
+	 *
+	 * @return Classification of this enemy.
+	 */
+	public final DefeatedEnemyType getDefeatedType() {
+		return this.defeatedType;
 	}
 
 	private static Color colorFor(final SpriteType spriteType) {
