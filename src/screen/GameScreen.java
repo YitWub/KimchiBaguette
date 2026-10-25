@@ -51,6 +51,7 @@ import hud.FloatingScoreHud;
 import records.RunSession;
 import records.RecordsService;
 import records.Achievement;
+import event.DefeatedEnemyType;
 import event.EnemyDefeatedEvent;
 import event.GameplayEventListener;
 import event.GameplayEventPublisher;
@@ -1448,7 +1449,7 @@ public class GameScreen extends Screen {
 			// saved run record read shipsDestroyed, not the defeat events,
 			// so a boss went uncounted in both until this.
 			this.shipsDestroyed++;
-			recordBossDefeat();
+			recordBossDefeat(event.getBossType());
 			break;
 		default:
 			break;
@@ -1486,19 +1487,44 @@ public class GameScreen extends Screen {
 	/**
 	 * Counts the boss as a defeated enemy in the run records. The boss
 	 * manager sends BossDefeated only once, so one id per boss is enough.
+	 * The boss type travels on this event too, so a listener needs only one
+	 * subscription for every kind of defeat.
+	 *
+	 * @param bossType
+	 *            Kind of boss that was defeated.
 	 */
-	private void recordBossDefeat() {
+	private void recordBossDefeat(final Boss.BossType bossType) {
 		if (this.runSession == null)
 			return;
 		this.recordsEvents.publish(new EnemyDefeatedEvent(
-				this.runSession.getRunId(), UUID.randomUUID().toString()));
+				this.runSession.getRunId(), UUID.randomUUID().toString(),
+				classifyBoss(bossType)));
+	}
+
+	/**
+	 * Classifies a defeated boss for its defeat event.
+	 *
+	 * @param bossType
+	 *            Kind of boss that was defeated.
+	 * @return Classification of the boss, UNKNOWN for an unlisted kind.
+	 */
+	private static DefeatedEnemyType classifyBoss(final Boss.BossType bossType) {
+		switch (bossType) {
+		case BOSS_A:
+			return DefeatedEnemyType.BOSS_A;
+		case BOSS_B:
+			return DefeatedEnemyType.BOSS_B;
+		default:
+			return DefeatedEnemyType.UNKNOWN;
+		}
 	}
 
     private void recordEnemyDefeat(final EnemyShip enemy) {
         if (this.runSession == null) return;
         String id = this.defeatIds.get(enemy);
         if (id == null) { id=UUID.randomUUID().toString(); this.defeatIds.put(enemy,id); }
-        this.recordsEvents.publish(new EnemyDefeatedEvent(this.runSession.getRunId(),id));
+        this.recordsEvents.publish(new EnemyDefeatedEvent(this.runSession.getRunId(),id,
+                enemy.getDefeatedType()));
     }
 
     /**
