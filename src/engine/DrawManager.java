@@ -10,6 +10,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -2099,6 +2100,253 @@ public final class DrawManager {
             backBufferGraphics.setColor(i == option ? Color.GREEN : Color.WHITE);
             drawCenteredRegularString(screen, labels[i],
                     screen.getHeight() / 3 + 60 + i * 40);
+        }
+    }
+
+    /**
+     * Draws a speech bubble with a tail pointing at the boss. The bubble sits
+     * above the boss, or below it when there is no room under the HUD, and it
+     * is kept inside the screen even when the boss is at an edge. Nothing is
+     * drawn when the text is null or empty.
+     *
+     * @param screen
+     *            Screen to draw on.
+     * @param text
+     *            Line the boss says. Wrapped to two lines at most.
+     * @param bossCenterX
+     *            Horizontal center of the boss.
+     * @param bossTopY
+     *            Top edge of the boss.
+     */
+    public void drawBossSpeech(final Screen screen, final String text,
+            final int bossCenterX, final int bossTopY) {
+        SpeechBubble bubble = SpeechBubble.layout(text, fontRegularMetrics,
+                bossCenterX, bossTopY, screen.getWidth(), screen.getHeight());
+        if (bubble == null)
+            return;
+
+        Color previousColor = backBufferGraphics.getColor();
+        Font previousFont = backBufferGraphics.getFont();
+
+        int x = bubble.getX();
+        int y = bubble.getY();
+        int w = bubble.getWidth();
+        int h = bubble.getHeight();
+        int tipX = bubble.getTailTipX();
+        int baseY = bubble.isBelowBoss() ? y : y + h - 1;
+        int tipY = bubble.getTailTipY();
+        int half = SpeechBubble.TAIL_HALF_WIDTH;
+        int[] tailX = { tipX - half, tipX + half + 1, tipX };
+        int[] tailY = { baseY, baseY, tipY };
+
+        // Fill first, then outline, so the tail joins the box without a seam.
+        backBufferGraphics.setColor(GameColors.BACKGROUND);
+        backBufferGraphics.fillRect(x, y, w, h);
+        backBufferGraphics.fillPolygon(tailX, tailY, 3);
+
+        backBufferGraphics.setColor(GameColors.TEXT);
+        backBufferGraphics.drawRect(x, y, w - 1, h - 1);
+        backBufferGraphics.drawLine(tipX - half, baseY, tipX, tipY);
+        backBufferGraphics.drawLine(tipX + half, baseY, tipX, tipY);
+        // Open the outline where the tail meets the box.
+        backBufferGraphics.setColor(GameColors.BACKGROUND);
+        backBufferGraphics.drawLine(tipX - half + 1, baseY, tipX + half - 1,
+                baseY);
+
+        backBufferGraphics.setFont(fontRegular);
+        backBufferGraphics.setColor(GameColors.TEXT);
+        int lineHeight = fontRegularMetrics.getHeight();
+        int textY = y + SpeechBubble.PADDING + fontRegularMetrics.getAscent();
+        for (String line : bubble.getLines()) {
+            int lineX = x + (w - fontRegularMetrics.stringWidth(line)) / 2;
+            backBufferGraphics.drawString(line, lineX, textY);
+            textY += lineHeight;
+        }
+
+        backBufferGraphics.setFont(previousFont);
+        backBufferGraphics.setColor(previousColor);
+    }
+
+    /**
+     * Position and text of a boss speech bubble. Kept free of drawing so the
+     * layout can be checked without a window.
+     */
+    public static final class SpeechBubble {
+
+        /** Most lines a bubble may show. */
+        public static final int MAX_LINES = 2;
+        /** Widest a line of text may be, about 26 characters of the font. */
+        public static final int MAX_TEXT_WIDTH = 288;
+        /** Space between the text and the outline. */
+        public static final int PADDING = 6;
+        /** Distance from the box to the tip of the tail. */
+        public static final int TAIL_HEIGHT = 6;
+        /** Gap between the tip of the tail and the boss. */
+        public static final int TAIL_GAP = 2;
+        /** Half the width of the tail where it meets the box. */
+        public static final int TAIL_HALF_WIDTH = 4;
+        /** Smallest gap kept between the bubble and the screen edges. */
+        public static final int SCREEN_MARGIN = 4;
+        /** Bottom of the top HUD (separation line) the bubble must not cover. */
+        public static final int HUD_BOTTOM = 40;
+        /** Height of the boss, used to place the bubble under it. */
+        public static final int BOSS_HEIGHT = entity.Boss.HEIGHT;
+        /** Added at the end of a line cut off after the last allowed line. */
+        static final String ELLIPSIS = "...";
+
+        private final List<String> lines;
+        private final int x;
+        private final int y;
+        private final int width;
+        private final int height;
+        private final int tailTipX;
+        private final int tailTipY;
+        private final boolean belowBoss;
+
+        private SpeechBubble(final List<String> lines, final int x,
+                final int y, final int width, final int height,
+                final int tailTipX, final int tailTipY,
+                final boolean belowBoss) {
+            this.lines = lines;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.tailTipX = tailTipX;
+            this.tailTipY = tailTipY;
+            this.belowBoss = belowBoss;
+        }
+
+        /**
+         * Lays out a bubble for the given line.
+         *
+         * @return The layout, or null when there is nothing to say.
+         */
+        public static SpeechBubble layout(final String text,
+                final FontMetrics metrics, final int bossCenterX,
+                final int bossTopY, final int screenWidth,
+                final int screenHeight) {
+            if (text == null || text.trim().isEmpty())
+                return null;
+
+            int maxTextWidth = Math.min(MAX_TEXT_WIDTH,
+                    screenWidth - 2 * (SCREEN_MARGIN + PADDING));
+            List<String> lines = wrap(text, metrics, maxTextWidth);
+
+            int textWidth = 0;
+            for (String line : lines)
+                textWidth = Math.max(textWidth, metrics.stringWidth(line));
+            int width = textWidth + 2 * PADDING;
+            int height = lines.size() * metrics.getHeight() + 2 * PADDING;
+
+            int x = clamp(bossCenterX - width / 2, SCREEN_MARGIN,
+                    screenWidth - SCREEN_MARGIN - width);
+
+            int aboveY = bossTopY - TAIL_GAP - TAIL_HEIGHT - height;
+            boolean below = aboveY < HUD_BOTTOM + SCREEN_MARGIN;
+            int y = below ? bossTopY + BOSS_HEIGHT + TAIL_GAP + TAIL_HEIGHT
+                    : aboveY;
+            y = clamp(y, HUD_BOTTOM + SCREEN_MARGIN,
+                    screenHeight - SCREEN_MARGIN - height);
+
+            // The tail follows the boss but never leaves the box corners.
+            int tipX = clamp(bossCenterX, x + PADDING + TAIL_HALF_WIDTH,
+                    x + width - 1 - PADDING - TAIL_HALF_WIDTH);
+            int tipY = below ? y - TAIL_HEIGHT : y + height - 1 + TAIL_HEIGHT;
+
+            return new SpeechBubble(lines, x, y, width, height, tipX, tipY,
+                    below);
+        }
+
+        /**
+         * Splits text into lines no wider than maxWidth, breaking at spaces.
+         * A word longer than a line is split by characters. Text that does
+         * not fit in MAX_LINES lines ends with an ellipsis.
+         */
+        static List<String> wrap(final String text, final FontMetrics metrics,
+                final int maxWidth) {
+            List<String> lines = new ArrayList<String>();
+            StringBuilder current = new StringBuilder();
+            for (String word : text.trim().split("\\s+")) {
+                String candidate = current.length() == 0 ? word
+                        : current + " " + word;
+                if (metrics.stringWidth(candidate) <= maxWidth) {
+                    current.setLength(0);
+                    current.append(candidate);
+                    continue;
+                }
+                if (current.length() > 0) {
+                    lines.add(current.toString());
+                    current.setLength(0);
+                }
+                String rest = word;
+                while (metrics.stringWidth(rest) > maxWidth) {
+                    int cut = fitLength(rest, metrics, maxWidth);
+                    lines.add(rest.substring(0, cut));
+                    rest = rest.substring(cut);
+                }
+                current.append(rest);
+            }
+            if (current.length() > 0)
+                lines.add(current.toString());
+
+            if (lines.size() <= MAX_LINES)
+                return lines;
+            List<String> kept = new ArrayList<String>(
+                    lines.subList(0, MAX_LINES));
+            String last = kept.get(MAX_LINES - 1);
+            while (!last.isEmpty()
+                    && metrics.stringWidth(last + ELLIPSIS) > maxWidth)
+                last = last.substring(0, last.length() - 1);
+            kept.set(MAX_LINES - 1, last.trim() + ELLIPSIS);
+            return kept;
+        }
+
+        /** Longest prefix of text that fits, at least one character. */
+        private static int fitLength(final String text,
+                final FontMetrics metrics, final int maxWidth) {
+            int length = 1;
+            while (length < text.length() && metrics.stringWidth(
+                    text.substring(0, length + 1)) <= maxWidth)
+                length++;
+            return length;
+        }
+
+        private static int clamp(final int value, final int min,
+                final int max) {
+            return Math.max(min, Math.min(value, max));
+        }
+
+        public List<String> getLines() {
+            return this.lines;
+        }
+
+        public int getX() {
+            return this.x;
+        }
+
+        public int getY() {
+            return this.y;
+        }
+
+        public int getWidth() {
+            return this.width;
+        }
+
+        public int getHeight() {
+            return this.height;
+        }
+
+        public int getTailTipX() {
+            return this.tailTipX;
+        }
+
+        public int getTailTipY() {
+            return this.tailTipY;
+        }
+
+        public boolean isBelowBoss() {
+            return this.belowBoss;
         }
     }
 }
